@@ -1,0 +1,21 @@
+/* Pestañas, segmentos, etiquetas y tarjetas */
+.tabs{display:flex;gap:8px;margin-bottom:12px}
+.tab{min-height:44px;padding:0 20px;border:2px solid var(--line);border-radius:99px;background:var(--color-surface-alt);color:var(--mute);font:inherit;font-weight:800;cursor:pointer}
+.tab.on{border-color:var(--acc);background:var(--color-accent-soft);color:var(--ink)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:12px;flex-wrap:wrap}
+.seg button{border:0;background:var(--card);color:var(--ink);padding:8px 14px;font:inherit;cursor:pointer}
+.seg button.on{background:var(--color-accent-soft);color:var(--acc);font-weight:700}
+.chip{display:inline-flex;align-items:center;padding:2px 10px;border-radius:99px;font-size:12px;font-weight:600;margin:0 4px 4px 0;color:var(--c,#888);border:1px solid var(--c,#888);background:transparent}
+.flt{margin-bottom:12px}.flt .chip,.tagpick .chip{cursor:pointer;opacity:.55;font-size:13px}
+.flt .chip.on,.tagpick .chip.on{opacity:1;background:var(--c);color:#fff}
+.tagpick .add{display:flex;gap:6px;margin-top:6px}.tagpick .add input[type=color]{width:44px;padding:2px;height:38px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+.pcard{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.pcard>img,.pcard>.ph{width:100%;height:120px;object-fit:cover;display:block}.pcard .pb{padding:12px}
+.cr{margin-bottom:8px}
+/* Ventana «Ver más» */
+.qd-hero{display:flex;gap:12px;align-items:center;margin-bottom:14px}
+.qd-icon{width:44px;height:44px;border-radius:50%;background:var(--color-accent-soft);display:flex;align-items:center;justify-content:center;font-size:1.4rem}
+.qd-sec{margin-bottom:14px}.qd-sec>b{font-size:.83rem}
+.qd-row{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px dashed var(--line);font-size:.85rem}
+.qd-row span{color:var(--mute)}.qd-row.good b{color:var(--ok)}.qd-row.bad b{color:var(--bad)}

@@ -1,27 +1,62 @@
-// Inventario por movimientos: el stock es la suma de entradas, salidas, mermas y ajustes.
+// Inventario: pestañas Pines / Stickers, estados (stock, en proceso, vendidos) y tarjetas con temática y etiquetas.
 (() => {
   const { db, ui } = CC, E = ui.esc;
+  let tipo = 'pines', estado = 'stock', tag = null;
   CC.mover = (varianteId, cant, tipo, motivo = '', ref = '') => db.add('movimientos', { varianteId, cant, tipo, motivo, ref, fecha: ui.hoy() });
+  const grupo = p => { const c = (p.categoria || '').toLowerCase(); return c.includes('pin') ? 'pines' : /stic?ker|stiker/.test(c) ? 'stickers' : 'otros'; };
+  const qty = (v, e) => e === 'stock' ? CC.stock(v.id) : e === 'proceso' ? CC.enProceso(v.id) : CC.vendidos(v.id);
 
-  function mov() {
+  const consumir = (varId, n) => { const v = db.get('variantes', varId); (v.receta || []).forEach(r => { const m = db.get('materiales', r.materialId); if (m) db.update('materiales', m.id, { stock: Math.max(0, m.stock - r.cant * n) }); }); };
+  function mov(varId, t, cant) {
     const opts = db.all('variantes').map(v => `<option value="${v.id}">${E(CC.nombreVar(v))}</option>`).join('');
     ui.modal('Movimiento de inventario', `<label>Variante<select class="inp" name="v">${opts}</select></label>
-      <div class="grid2"><label>Tipo<select class="inp" name="tipo"><option value="entrada">Entrada (+)</option><option value="merma">Merma (−)</option><option value="ajuste">Ajuste (+ o −)</option></select></label>${ui.inp('cant', 'Cantidad', '', 'number')}</div>${ui.inp('motivo', 'Motivo')}`, m => {
+      <div class="grid2"><label>Tipo<select class="inp" name="tipo"><option value="entrada">Entrada a stock (+)</option><option value="proceso">Mandar a proceso</option><option value="terminar">Terminar proceso → stock</option><option value="merma">Merma (−)</option><option value="ajuste">Ajuste (+ o −)</option></select></label>${ui.inp('cant', 'Cantidad', cant || '', 'number')}</div>${ui.inp('motivo', 'Motivo')}`, m => {
       const o = ui.vals(m); let c = +o.cant;
       if (!o.v || !c) { ui.toast('Elige variante y cantidad'); return false; }
-      if (o.tipo === 'merma') c = -Math.abs(c); if (o.tipo === 'entrada') c = Math.abs(c);
-      CC.mover(o.v, c, o.tipo, o.motivo); CC.router.show();
+      const a = Math.abs(c);
+      if (o.tipo === 'proceso') CC.mover(o.v, a, 'proceso', o.motivo);
+      else if (o.tipo === 'terminar') { CC.mover(o.v, -a, 'proceso', 'Terminado'); CC.mover(o.v, a, 'entrada', 'Terminado de proceso'); consumir(o.v, a); }
+      else CC.mover(o.v, o.tipo === 'merma' ? -a : o.tipo === 'entrada' ? a : c, o.tipo, o.motivo);
+      CC.router.show();
     });
+    const m = document.getElementById('modal'); if (varId) m.querySelector('[name=v]').value = varId; if (t) m.querySelector('[name=tipo]').value = t;
   }
+  function tarjeta(p) {
+    ui.modal('Tarjeta del producto', ui.inp('coleccion', 'Temática / colección', p.coleccion) + '<label>Etiquetas</label>' + CC.tags.picker('producto', p.etiquetas), m => {
+      db.update('productos', p.id, { coleccion: ui.vals(m).coleccion, etiquetas: CC.tags.leer(m) }); CC.router.show(); });
+    CC.tags.bind(document.getElementById('modal'));
+  }
+
   CC.router.register('inventario', 'Inventario', '📦', el => {
-    const vs = db.all('variantes'), movs = db.all('movimientos').slice(-25).reverse();
-    el.innerHTML = `<div class="bar"><button class="btn" id="mov">+ Movimiento</button></div>
-      <div class="card"><h3>Existencias</h3><table><thead><tr><th>Producto</th><th>Stock</th><th>Mínimo</th><th>Estado</th></tr></thead><tbody>
-      ${vs.map(v => { const s = CC.stock(v.id), bajo = v.minimo && s <= v.minimo;
-        return `<tr><td>${E(CC.nombreVar(v))}</td><td>${s}</td><td>${v.minimo || '—'}</td><td class="${bajo ? 'neg' : 'pos-n'}">${bajo ? 'Resurtir' : 'Bien'}</td></tr>`; }).join('') || '<tr><td colspan="4" class="mute">Sin productos.</td></tr>'}
-      </tbody></table></div>
-      <div class="card"><h3>Últimos movimientos</h3><table><tbody>${movs.map(m => { const v = db.get('variantes', m.varianteId);
-        return `<tr><td>${m.fecha}</td><td>${E(v ? CC.nombreVar(v) : '?')}</td><td>${m.tipo}</td><td class="${m.cant < 0 ? 'neg' : 'pos-n'}">${m.cant > 0 ? '+' : ''}${m.cant}</td><td class="mute">${E(m.motivo)}</td></tr>`; }).join('') || '<tr><td class="mute">Sin movimientos.</td></tr>'}</tbody></table></div>`;
-    el.querySelector('#mov').onclick = mov;
+    const ps = db.all('productos'), vs = db.all('variantes'), enG = ps.filter(p => grupo(p) === tipo);
+    const pvs = p => vs.filter(v => v.productoId === p.id);
+    const tabs = [['pines', '📍 Pines'], ['stickers', '🖼️ Stickers'], ['otros', '📦 Otros']].map(([k, l]) => `<button class="tab ${tipo === k ? 'on' : ''}" data-t="${k}">${l} <small>(${ps.filter(p => grupo(p) === k).length})</small></button>`).join('');
+    const segs = [['stock', 'Nuevos / en stock'], ['proceso', 'En proceso'], ['vendidos', 'Vendidos']].map(([k, l]) =>
+      `<button class="${estado === k ? 'on' : ''}" data-s="${k}">${l} · ${enG.reduce((s, p) => s + pvs(p).reduce((a, v) => a + Math.max(0, qty(v, k)), 0), 0)}</button>`).join('');
+    const usadas = [...new Set(enG.flatMap(p => p.etiquetas || []))].map(id => db.get('etiquetas', id)).filter(t => t && !t.eliminado);
+    const cards = enG.filter(p => !tag || (p.etiquetas || []).includes(tag)).map(p => {
+      const pv = pvs(p), tot = pv.reduce((s, v) => s + Math.max(0, qty(v, estado)), 0); if (estado !== 'stock' && !tot) return '';
+      const nuevo = Date.now() - new Date(p.creado) < 12096e5 ? '<span class="chip" style="--c:#12b886">Nuevo</span>' : '';
+      return `<div class="pcard">${p.foto ? `<img src="${p.foto}">` : '<div class="ph"></div>'}<div class="pb"><b>${E(p.producto)}</b> ${nuevo}<div class="mute">${E(p.coleccion || 'Sin temática')}</div><div>${CC.tags.chips(p.etiquetas)}</div>
+        ${pv.map(v => { const q = qty(v, estado); if (estado !== 'stock' && !q) return ''; const bajo = estado === 'stock' && v.minimo && q <= v.minimo;
+          return `<div class="line"><span>${E(v.nombre || 'Único')}${estado === 'stock' && CC.puedeHacer(v) !== null ? `<div class="mute">Material para ${CC.puedeHacer(v)} más</div>` : ''}</span><span class="${bajo ? 'neg' : ''}">${q} pzs ${estado === 'proceso' ? `<button class="btn ghost sm" data-f="${v.id}" data-n="${q}">Terminar</button>` : ''}</span></div>`; }).join('')}
+        <div class="bar" style="margin:8px 0 0"><button class="btn ghost sm" data-e="${p.id}">Tarjeta</button><button class="btn ghost sm" data-mv="${pv[0]?.id || ''}">Movimiento</button></div></div></div>`; }).join('');
+    const movs = db.all('movimientos').slice(-15).reverse();
+    el.innerHTML = `<div class="tabs">${tabs}</div><div class="bar"><div class="seg">${segs}</div><div style="flex:1"></div><button class="btn" id="mov">+ Movimiento</button></div>
+      ${usadas.length ? `<div class="flt">${usadas.map(t => `<span class="chip ${tag === t.id ? 'on' : ''}" data-g="${t.id}" style="--c:${t.color}">${E(t.nombre)}</span>`).join('')}</div>` : ''}
+      <div class="cards">${cards || '<p class="mute">No hay nada aquí todavía.</p>'}</div>
+      <details class="card" style="margin-top:16px"><summary>Últimos movimientos</summary><table><tbody>${movs.map(m => { const v = db.get('variantes', m.varianteId);
+        return `<tr><td>${m.fecha}</td><td>${E(v ? CC.nombreVar(v) : '?')}</td><td>${m.tipo}</td><td class="${m.cant < 0 ? 'neg' : 'pos-n'}">${m.cant > 0 ? '+' : ''}${m.cant}</td><td class="mute">${E(m.motivo)}</td></tr>`; }).join('')}</tbody></table></details>`;
+    el.querySelector('#mov').onclick = () => mov();
+    el.onclick = e => {
+      const t = e.target.closest('[data-t]'), s = e.target.closest('[data-s]'), g = e.target.closest('[data-g]'), b = e.target.closest('button[data-e],button[data-mv],button[data-f]');
+      if (t) { tipo = t.dataset.t; tag = null; return CC.router.show(); }
+      if (s) { estado = s.dataset.s; return CC.router.show(); }
+      if (g) { tag = tag === g.dataset.g ? null : g.dataset.g; return CC.router.show(); }
+      if (!b) return;
+      if (b.dataset.e) tarjeta(db.get('productos', b.dataset.e));
+      else if (b.dataset.f) mov(b.dataset.f, 'terminar', b.dataset.n);
+      else mov(b.dataset.mv);
+    };
   });
 })();

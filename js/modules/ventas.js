@@ -10,7 +10,8 @@
     el.innerHTML = `<div class="pos"><section><input class="inp" id="q" placeholder="Buscar producto…"><div class="tiles" id="tiles"></div></section>
       <div class="card"><h3>Venta actual</h3><div id="cart"></div><div class="tot"><span>Total</span><b id="tot"></b></div>
       <label>Pago<select class="inp" id="pay"><option>Efectivo</option><option>Tarjeta</option><option>Transferencia</option></select></label>
-      <label>Evento<select class="inp" id="ev"><option value="">Sin evento</option>${evs.map(e => `<option value="${e.id}">${E(e.nombre)}</option>`).join('')}</select></label>
+      <label>Bazar / evento<select class="inp" id="ev"><option value="">Sin evento</option>${evs.map(e => `<option value="${e.id}">${E(e.nombre)}</option>`).join('')}</select></label>
+      <label>Cliente (opcional)<select class="inp" id="cl"><option value="">Sin cliente</option>${db.all('clientes').map(c => `<option value="${c.id}">${E(c.nombre)}</option>`).join('')}</select></label>
       <button class="btn big" id="ok">Cobrar</button></div></div>
       <div class="card"><h3>Últimas ventas</h3><div id="hist"></div></div>`;
     const $ = s => el.querySelector(s);
@@ -27,7 +28,8 @@
     $('#cart').onclick = e => { const b = e.target.closest('button'); if (!b) return;
       if (b.dataset.p) cart[b.dataset.p].cant++; else if (--cart[b.dataset.m].cant <= 0) cart.splice(b.dataset.m, 1); paint(); };
     $('#ok').onclick = () => { if (!cart.length) return ui.toast('La venta está vacía');
-      const venta = db.add('ventas', { items: cart, total: cart.reduce((s, i) => s + i.precio * i.cant, 0), pago: $('#pay').value, eventoId: $('#ev').value, fecha: ui.hoy() });
+      const venta = db.add('ventas', { items: cart, total: cart.reduce((s, i) => s + i.precio * i.cant, 0), pago: $('#pay').value, eventoId: $('#ev').value, clienteId: $('#cl').value, fecha: ui.hoy() });
+      if (venta.pago === 'Tarjeta') db.update('ventas', venta.id, { comision: venta.total * ui.cfg.comision() / 100 });
       cart.forEach(i => CC.mover(i.varianteId, -i.cant, 'venta', '', venta.id)); cart = []; ui.toast('Venta registrada'); CC.router.show(); };
     $('#hist').onclick = e => { const b = e.target.closest('[data-x]'); if (!b) return; const v = db.get('ventas', b.dataset.x);
       db.update('ventas', v.id, { anulada: true }); v.items.forEach(i => CC.mover(i.varianteId, i.cant, 'anulación', 'Venta anulada', v.id)); ui.toast('Venta anulada'); CC.router.show(); };
