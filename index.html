@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
+<meta name="color-scheme" content="dark">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CLOWN CLOUD</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -13,7 +14,7 @@
   <aside class="sidebar" id="side">
     <div class="sidebar-logo"><span class="logo-mark">🤡</span><span class="logo-word">CLOWN CLOUD</span></div>
     <nav class="sidebar-nav" id="nav"></nav>
-    <div class="sidebar-footer"><button class="btn-icon" id="tema">🌙 <span>Modo claro/oscuro</span></button></div>
+    
   </aside>
   <div class="sidebar-overlay" id="ov"></div>
   <div class="main-area">
@@ -23,10 +24,13 @@
 </div>
 <div id="modal" class="modal-overlay"></div><div id="toast"></div>
 <!-- Núcleo -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="js/core/db.js"></script>
 <script src="js/core/ui.js"></script>
 <script src="js/core/router.js"></script>
 <script src="js/core/etiquetas.js"></script>
+<script src="js/core/excel.js"></script>
+<script src="js/core/semilla.js"></script>
 <!-- Módulos: el orden define las pestañas -->
 <script src="js/modules/inicio.js"></script>
 <script src="js/modules/ventas.js"></script>

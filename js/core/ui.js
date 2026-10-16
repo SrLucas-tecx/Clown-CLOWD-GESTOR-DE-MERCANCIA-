@@ -3,7 +3,13 @@ CC.ui = {
   money: n => '$' + (+n || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
   esc: s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])),
   hoy: () => new Date().toLocaleDateString('sv'),
-  toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('on'), 2500); },
+  toast(msg, acc) {
+    const t = document.getElementById('toast'); t.textContent = msg; t.classList.toggle('act', !!acc);
+    if (acc) { const b = document.createElement('button'); b.className = 'toast-accion'; b.textContent = acc.label; b.onclick = () => { t.classList.remove('on'); acc.fn(); }; t.appendChild(b); }
+    t.classList.add('on'); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('on'), acc ? 8000 : 2500);
+  },
+  // Aviso con «Deshacer»: copia es el JSON de los datos tomado ANTES del cambio.
+  deshacer(msg, copia) { CC.ui.toast(msg, { label: '↩️ Deshacer', fn: () => { CC.db.reemplazar(JSON.parse(copia)); CC.router.show(); CC.ui.toast('Se deshizo el último cambio'); } }); },
   vals(m) { const o = {}; m.querySelectorAll('[name]').forEach(i => o[i.name] = i.value); return o; },
   modal(title, body, onSave) {
     const m = document.getElementById('modal'), close = () => m.classList.remove('open');

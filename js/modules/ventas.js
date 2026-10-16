@@ -17,7 +17,7 @@
     const $ = s => el.querySelector(s);
     const tiles = () => { const q = $('#q').value.toLowerCase();
       $('#tiles').innerHTML = vs.filter(v => CC.nombreVar(v).toLowerCase().includes(q)).map(v => { const p = db.get('productos', v.productoId) || {};
-        return `<button class="tile" data-id="${v.id}">${p.foto ? `<img src="${p.foto}">` : '<div class="ph"></div>'}<b>${E(CC.nombreVar(v))}</b><div class="mute">${ui.money(v.precio)} · ${CC.stock(v.id)} pzs</div></button>`; }).join('') || '<p class="mute">Agrega productos en el Catálogo.</p>'; };
+        return `<button class="tile" data-id="${v.id}"><b>${E(CC.nombreVar(v))}</b><div class="mute">${ui.money(v.precio)} · ${CC.stock(v.id)} pzs</div></button>`; }).join('') || '<p class="mute">Agrega productos en el Catálogo.</p>'; };
     const paint = () => { $('#cart').innerHTML = cart.map((i, n) => `<div class="line"><span>${E(i.nombre)}</span><span><button class="btn ghost sm" data-m="${n}">−</button> ${i.cant} <button class="btn ghost sm" data-p="${n}">+</button> ${ui.money(i.precio * i.cant)}</span></div>`).join('') || '<p class="mute">Toca un producto para agregarlo.</p>';
       $('#tot').textContent = ui.money(cart.reduce((s, i) => s + i.precio * i.cant, 0)); };
     const hist = () => { $('#hist').innerHTML = `<table><tbody>${db.all('ventas').slice(-10).reverse().map(v => `<tr class="${v.anulada ? 'mute' : ''}"><td>${v.fecha}</td><td>${v.items.map(i => i.cant + '× ' + E(i.nombre)).join(', ')}</td><td>${v.pago}</td><td>${ui.money(v.total)}</td><td class="end">${v.anulada ? 'Anulada' : `<button class="btn ghost sm" data-x="${v.id}">Anular</button>`}</td></tr>`).join('') || '<tr><td class="mute">Aún no hay ventas.</td></tr>'}</tbody></table>`; };

@@ -37,7 +37,7 @@
     const cards = enG.filter(p => !tag || (p.etiquetas || []).includes(tag)).map(p => {
       const pv = pvs(p), tot = pv.reduce((s, v) => s + Math.max(0, qty(v, estado)), 0); if (estado !== 'stock' && !tot) return '';
       const nuevo = Date.now() - new Date(p.creado) < 12096e5 ? '<span class="chip" style="--c:#12b886">Nuevo</span>' : '';
-      return `<div class="pcard">${p.foto ? `<img src="${p.foto}">` : '<div class="ph"></div>'}<div class="pb"><b>${E(p.producto)}</b> ${nuevo}<div class="mute">${E(p.coleccion || 'Sin temática')}</div><div>${CC.tags.chips(p.etiquetas)}</div>
+      return `<div class="pcard"><div class="pb"><b>${E(p.producto)}</b> ${nuevo}<div class="mute">${E(p.coleccion || 'Sin temática')}</div><div>${CC.tags.chips(p.etiquetas)}</div>
         ${pv.map(v => { const q = qty(v, estado); if (estado !== 'stock' && !q) return ''; const bajo = estado === 'stock' && v.minimo && q <= v.minimo;
           return `<div class="line"><span>${E(v.nombre || 'Único')}${estado === 'stock' && CC.puedeHacer(v) !== null ? `<div class="mute">Material para ${CC.puedeHacer(v)} más</div>` : ''}</span><span class="${bajo ? 'neg' : ''}">${q} pzs ${estado === 'proceso' ? `<button class="btn ghost sm" data-f="${v.id}" data-n="${q}">Terminar</button>` : ''}</span></div>`; }).join('')}
         <div class="bar" style="margin:8px 0 0"><button class="btn ghost sm" data-e="${p.id}">Tarjeta</button><button class="btn ghost sm" data-mv="${pv[0]?.id || ''}">Movimiento</button></div></div></div>`; }).join('');

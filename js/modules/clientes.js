@@ -32,7 +32,7 @@
       if (!b) return;
       if (b.dataset.e) form(db.get('clientes', b.dataset.e));
       if (b.dataset.v) ver(db.get('clientes', b.dataset.v));
-      if (b.dataset.d) ui.confirm('¿Eliminar este cliente?').then(ok => { if (ok) { db.remove('clientes', b.dataset.d); CC.router.show(); } });
+      if (b.dataset.d) ui.confirm('¿Eliminar este cliente?').then(ok => { if (ok) { const copia = JSON.stringify(db.crudo()); db.remove('clientes', b.dataset.d); CC.router.show(); ui.deshacer('Cliente eliminado.', copia); } });
     };
   });
 })();
