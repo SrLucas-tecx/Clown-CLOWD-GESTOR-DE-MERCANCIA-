@@ -12,6 +12,7 @@
       <label>Pago<select class="inp" id="pay"><option>Efectivo</option><option>Tarjeta</option><option>Transferencia</option></select></label>
       <label>Bazar / evento<select class="inp" id="ev"><option value="">Sin evento</option>${evs.map(e => `<option value="${e.id}">${E(e.nombre)}</option>`).join('')}</select></label>
       <label>Cliente (opcional)<select class="inp" id="cl"><option value="">Sin cliente</option>${db.all('clientes').map(c => `<option value="${c.id}">${E(c.nombre)}</option>`).join('')}</select></label>
+      <button class="btn ghost sm" id="nc" type="button">＋ Cliente nuevo</button>
       <button class="btn big" id="ok">Cobrar</button></div></div>
       <div class="card"><h3>Últimas ventas</h3><div id="hist"></div></div>`;
     const $ = s => el.querySelector(s);
@@ -24,10 +25,13 @@
     tiles(); paint(); hist();
     $('#q').oninput = tiles;
     $('#tiles').onclick = e => { const t = e.target.closest('.tile'); if (!t) return; const v = db.get('variantes', t.dataset.id), l = cart.find(i => i.varianteId === v.id);
+      if ((l ? l.cant : 0) + 1 > CC.stock(v.id)) return ui.toast(`No hay suficiente "${CC.nombreVar(v)}": quedan ${Math.max(0, CC.stock(v.id))}`);
       l ? l.cant++ : cart.push({ varianteId: v.id, nombre: CC.nombreVar(v), cant: 1, precio: v.precio, costo: v.costo }); paint(); };
     $('#cart').onclick = e => { const b = e.target.closest('button'); if (!b) return;
-      if (b.dataset.p) cart[b.dataset.p].cant++; else if (--cart[b.dataset.m].cant <= 0) cart.splice(b.dataset.m, 1); paint(); };
+      if (b.dataset.p) { const i = cart[b.dataset.p]; if (i.cant + 1 > CC.stock(i.varianteId)) return ui.toast(`Solo quedan ${Math.max(0, CC.stock(i.varianteId))} de "${i.nombre}"`); i.cant++; } else if (--cart[b.dataset.m].cant <= 0) cart.splice(b.dataset.m, 1); paint(); };
+    $('#nc').onclick = () => CC.clienteForm();
     $('#ok').onclick = () => { if (!cart.length) return ui.toast('La venta está vacía');
+      const sinStock = cart.find(i => i.cant > CC.stock(i.varianteId)); if (sinStock) return ui.toast(`No se puede cobrar: "${sinStock.nombre}" ya no tiene stock suficiente`);
       const venta = db.add('ventas', { items: cart, total: cart.reduce((s, i) => s + i.precio * i.cant, 0), pago: $('#pay').value, eventoId: $('#ev').value, clienteId: $('#cl').value, fecha: ui.hoy() });
       if (venta.pago === 'Tarjeta') db.update('ventas', venta.id, { comision: venta.total * ui.cfg.comision() / 100 });
       cart.forEach(i => CC.mover(i.varianteId, -i.cant, 'venta', '', venta.id)); cart = []; ui.toast('Venta registrada'); CC.router.show(); };

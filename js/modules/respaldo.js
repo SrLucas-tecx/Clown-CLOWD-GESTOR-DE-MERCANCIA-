@@ -4,7 +4,7 @@
   const { db, ui } = CC, E = ui.esc;
   const ls = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { ui.toast('Poco espacio para la copia anterior'); } } };
   const K = { ult: 'clowncloud:ultimoRespaldo', disp: 'clowncloud:dispositivo', copia: 'clowncloud:copia', aviso: 'clowncloud:avisoRespaldo' };
-  const COL = [['productos', 'Productos'], ['variantes', 'Variantes'], ['materiales', 'Materiales'], ['clientes', 'Clientes'], ['eventos', 'Bazares'], ['ventas', 'Ventas'], ['movimientos', 'Movimientos'], ['etiquetas', 'Etiquetas']];
+  const COL = [['productos', 'Productos'], ['variantes', 'Variantes'], ['materiales', 'Materiales'], ['clientes', 'Clientes'], ['eventos', 'Bazares'], ['ventas', 'Ventas'], ['movimientos', 'Movimientos'], ['compras', 'Compras'], ['etiquetas', 'Etiquetas']];
   const n = (d, k) => (d[k] || []).filter(r => !r.eliminado).length;
   const disp = () => ls.get(K.disp) || (/Android|iPhone|Mobile/i.test(navigator.userAgent) ? 'Celular' : 'Computadora');
   const dias = iso => iso ? Math.floor((Date.now() - new Date(iso)) / 864e5) : null;
@@ -50,6 +50,7 @@
       Materiales: db.all('materiales').map(m => ({ Material: m.nombre, Grupo: m.grupo, Unidad: m.unidad, Stock: m.stock, 'Costo por unidad': m.costo, 'Mínimo': m.minimo, 'Valor en stock': Math.round(m.stock * m.costo * 100) / 100 })),
       Ventas: db.all('ventas').map(v => ({ Fecha: v.fecha, Detalle: v.items.map(i => i.cant + 'x ' + i.nombre).join(' / '), Piezas: v.items.reduce((s, i) => s + i.cant, 0), Total: v.total, Pago: v.pago, 'Comisión': v.comision || 0, Bazar: (db.get('eventos', v.eventoId) || {}).nombre || 'Sin bazar', Cliente: (db.get('clientes', v.clienteId) || {}).nombre || '', Estado: v.anulada ? 'Anulada' : 'Válida' })),
       Clientes: db.all('clientes').map(c => { const cv = vs.filter(v => v.clienteId === c.id); return { Cliente: c.nombre, Contacto: c.contacto || '', Etiquetas: tag(c.etiquetas), Pedidos: cv.length, 'Total gastado': cv.reduce((s, v) => s + v.total, 0) }; }),
+      Compras: db.all('compras').filter(c => !c.anulada).flatMap(c => c.lineas.map(l => ({ Fecha: c.fecha, Proveedor: c.proveedor || '', Producto: l.nombre, Cantidad: l.cant, 'Costo de lista': l.lista, 'Costo real': l.real, 'Costo unitario real': Math.round(l.real / l.cant * 100) / 100 }))),
       Bazares: db.all('eventos').map(e => ({ Bazar: e.nombre, Fecha: e.fecha || '', 'Días': e.dias || 0, Mesa: e.mesa || 0, 'Ya pagado': e.pagado || 0, 'Fondo de caja': e.fondoCaja || 0 })) });
   }
   const recordatorio = () => {

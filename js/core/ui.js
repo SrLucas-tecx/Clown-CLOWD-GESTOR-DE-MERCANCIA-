@@ -6,7 +6,7 @@ CC.ui = {
   toast(msg, acc) {
     const t = document.getElementById('toast'); t.textContent = msg; t.classList.toggle('act', !!acc);
     if (acc) { const b = document.createElement('button'); b.className = 'toast-accion'; b.textContent = acc.label; b.onclick = () => { t.classList.remove('on'); acc.fn(); }; t.appendChild(b); }
-    t.classList.add('on'); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('on'), acc ? 8000 : 2500);
+    t.classList.add('on'); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('on'), acc ? 8000 : Math.max(2500, msg.length * 60));
   },
   // Aviso con «Deshacer»: copia es el JSON de los datos tomado ANTES del cambio.
   deshacer(msg, copia) { CC.ui.toast(msg, { label: '↩️ Deshacer', fn: () => { CC.db.reemplazar(JSON.parse(copia)); CC.router.show(); CC.ui.toast('Se deshizo el último cambio'); } }); },
@@ -15,6 +15,7 @@ CC.ui = {
     const m = document.getElementById('modal'), close = () => m.classList.remove('open');
     m.innerHTML = `<div class="modal-box"><div class="modal-header"><h2 class="modal-title">${title}</h2><button class="modal-close" data-x aria-label="Cerrar">✕</button></div><div class="modal-body">${body}</div><div class="modal-footer"><button class="btn ghost" data-x>Cancelar</button>${onSave ? '<button class="btn" data-ok>Guardar</button>' : ''}</div></div>`;
     m.classList.add('open');
+    m.oninput = m.onchange = null;
     m.onclick = e => { if (e.target === m || e.target.closest('[data-x]')) close(); };
     if (onSave) m.querySelector('[data-ok]').onclick = () => { if (onSave(m) !== false) close(); };
   },
@@ -38,11 +39,11 @@ CC.ui = {
     m.classList.add('open');
     m.onclick = e => { const b = e.target.closest('[data-a]'); if (e.target === m || e.target.closest('[data-x]')) m.classList.remove('open'); else if (b) { m.classList.remove('open'); acciones[b.dataset.a].fn(); } };
   },
-  thumb(file, cb) {
+  thumb(file, cb, max = 160) {
     if (!file) return;
     const r = new FileReader();
     r.onload = () => { const i = new Image(); i.onload = () => {
-      const k = Math.min(1, 160 / Math.max(i.width, i.height)), c = document.createElement('canvas');
+      const k = Math.min(1, max / Math.max(i.width, i.height)), c = document.createElement('canvas');
       c.width = i.width * k; c.height = i.height * k; c.getContext('2d').drawImage(i, 0, 0, c.width, c.height);
       cb(c.toDataURL('image/jpeg', .7)); }; i.src = r.result; };
     r.readAsDataURL(file);

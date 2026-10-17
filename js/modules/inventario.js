@@ -13,7 +13,12 @@
       <div class="grid2"><label>Tipo<select class="inp" name="tipo"><option value="entrada">Entrada a stock (+)</option><option value="proceso">Mandar a proceso</option><option value="terminar">Terminar proceso → stock</option><option value="merma">Merma (−)</option><option value="ajuste">Ajuste (+ o −)</option></select></label>${ui.inp('cant', 'Cantidad', cant || '', 'number')}</div>${ui.inp('motivo', 'Motivo')}`, m => {
       const o = ui.vals(m); let c = +o.cant;
       if (!o.v || !c) { ui.toast('Elige variante y cantidad'); return false; }
-      const a = Math.abs(c);
+      const a = Math.abs(c), nom = CC.nombreVar(db.get('variantes', o.v));
+      if (o.tipo === 'terminar') { const en = CC.enProceso(o.v), f = CC.faltantes(o.v, a);
+        if (a > en) { ui.toast(`No se puede: "${nom}" solo tiene ${en} en proceso`); return false; }
+        if (f.length) { ui.toast('Falta material para terminar: ' + f.join(', ')); return false; } }
+      const sale = o.tipo === 'merma' || (o.tipo === 'ajuste' && c < 0) ? a : 0;
+      if (sale > CC.stock(o.v)) { ui.toast(`No se puede sacar ${sale}: "${nom}" solo tiene ${CC.stock(o.v)} en stock`); return false; }
       if (o.tipo === 'proceso') CC.mover(o.v, a, 'proceso', o.motivo);
       else if (o.tipo === 'terminar') { CC.mover(o.v, -a, 'proceso', 'Terminado'); CC.mover(o.v, a, 'entrada', 'Terminado de proceso'); consumir(o.v, a); }
       else CC.mover(o.v, o.tipo === 'merma' ? -a : o.tipo === 'entrada' ? a : c, o.tipo, o.motivo);
@@ -42,12 +47,13 @@
           return `<div class="line"><span>${E(v.nombre || 'Único')}${estado === 'stock' && CC.puedeHacer(v) !== null ? `<div class="mute">Material para ${CC.puedeHacer(v)} más</div>` : ''}</span><span class="${bajo ? 'neg' : ''}">${q} pzs ${estado === 'proceso' ? `<button class="btn ghost sm" data-f="${v.id}" data-n="${q}">Terminar</button>` : ''}</span></div>`; }).join('')}
         <div class="bar" style="margin:8px 0 0"><button class="btn ghost sm" data-e="${p.id}">Tarjeta</button><button class="btn ghost sm" data-mv="${pv[0]?.id || ''}">Movimiento</button></div></div></div>`; }).join('');
     const movs = db.all('movimientos').slice(-15).reverse();
-    el.innerHTML = `<div class="tabs">${tabs}</div><div class="bar"><div class="seg">${segs}</div><div style="flex:1"></div><button class="btn" id="mov">+ Movimiento</button></div>
+    el.innerHTML = `<div class="tabs">${tabs}</div><div class="bar"><div class="seg">${segs}</div><div style="flex:1"></div><button class="btn ghost" id="et">🏷️ Etiquetas</button><button class="btn" id="mov">+ Movimiento</button></div>
       ${usadas.length ? `<div class="flt">${usadas.map(t => `<span class="chip ${tag === t.id ? 'on' : ''}" data-g="${t.id}" style="--c:${t.color}">${E(t.nombre)}</span>`).join('')}</div>` : ''}
       <div class="cards">${cards || '<p class="mute">No hay nada aquí todavía.</p>'}</div>
       <details class="card" style="margin-top:16px"><summary>Últimos movimientos</summary><table><tbody>${movs.map(m => { const v = db.get('variantes', m.varianteId);
         return `<tr><td>${m.fecha}</td><td>${E(v ? CC.nombreVar(v) : '?')}</td><td>${m.tipo}</td><td class="${m.cant < 0 ? 'neg' : 'pos-n'}">${m.cant > 0 ? '+' : ''}${m.cant}</td><td class="mute">${E(m.motivo)}</td></tr>`; }).join('')}</tbody></table></details>`;
     el.querySelector('#mov').onclick = () => mov();
+    el.querySelector('#et').onclick = () => CC.tags.gestionar('producto', () => CC.router.show());
     el.onclick = e => {
       const t = e.target.closest('[data-t]'), s = e.target.closest('[data-s]'), g = e.target.closest('[data-g]'), b = e.target.closest('button[data-e],button[data-mv],button[data-f]');
       if (t) { tipo = t.dataset.t; tag = null; return CC.router.show(); }

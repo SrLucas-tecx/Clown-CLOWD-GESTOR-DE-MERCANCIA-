@@ -23,7 +23,9 @@ CC.semilla = {
       { dias: -3, evento: 'Bazar Anime Fest', cliente: 'Ana', pago: 'Efectivo', items: [['Gato astronauta · 1.5" epoxi', 3], ['Pack gatos par · Par mate', 2]] },
       { dias: -3, evento: 'Bazar Anime Fest', cliente: '', pago: 'Tarjeta', items: [['Chibi ramen · 1.5" epoxi', 2]] },
       { dias: -2, evento: 'Bazar Anime Fest', cliente: 'Luis', pago: 'Transferencia', items: [['Hoja anime · Hoja A5', 5]] },
-      { dias: -1, evento: '', cliente: 'Sofi', pago: 'Efectivo', items: [['Pack gatos par · Par mate', 1]] }]
+      { dias: -1, evento: '', cliente: 'Sofi', pago: 'Efectivo', items: [['Pack gatos par · Par mate', 1]] }],
+    compras: [ // lineas: [nombre, categoría, cantidad, costo de lista, precio de venta] · pagado: lo que de verdad pagaste
+      { proveedor: 'Proveedor de accesorios', pagado: 220, lineas: [['Pinzas kawaii', 'Pinzas', 6, 46.79, 10], ['Llaveros de tortuga', 'Llaveros', 16, 93, 10], ['Monederos de tiburón', 'Monederos', 6, 174.32, 40]] }]
   },
   // Carga los datos de prueba (reemplaza todo lo que haya).
   cargar() {
@@ -48,6 +50,10 @@ CC.semilla = {
       const total = items.reduce((s, i) => s + i.precio * i.cant, 0);
       const ve = db.add('ventas', { items, total, pago: v.pago, eventoId: id['e:' + v.evento] || '', clienteId: id['c:' + v.cliente] || '', fecha: f.toLocaleDateString('sv'), comision: v.pago === 'Tarjeta' ? total * CC.ui.cfg.comision() / 100 : 0 });
       items.forEach(i => CC.mover(i.varianteId, -i.cant, 'venta', '', ve.id));
+    });
+    (S.compras || []).forEach(c => {
+      const r = CC.recibirCompra({ fecha: new Date().toLocaleDateString('sv'), proveedor: c.proveedor, pagado: c.pagado, lineas: c.lineas.map(([nombre, cat, cant, lista]) => ({ id: '', nombre, cat, cant, lista })) });
+      r.lineas.forEach((l, i) => db.update('variantes', l.varianteId, { precio: c.lineas[i][4] }));
     });
   },
   // Primera vez que se abre la app y no hay productos: carga los datos de prueba.
