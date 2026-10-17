@@ -1,5 +1,17 @@
 /* CLOWN CLOUD — modo oscuro. Colores de marca: --color-bg (fondo azul), --color-accent (botones amarillos), --color-tab (pestañas rojas) */
-:root{color-scheme:dark;--color-bg:#0d1b3d;--color-surface:#13254f;--color-surface-alt:#1a2f61;--color-border:#2a4178;--color-accent:#ffc933;--color-accent-dark:#e0ab00;--color-accent-soft:rgba(255,201,51,.15);--color-tab:#e3363d;--color-tab-soft:rgba(227,54,61,.2);--color-text:#f4f1ea;--color-text-muted:#a5b4d8;--color-success:#3fd08f;--color-danger:#ff5a5f;--color-warning:#e0a23a;--font-display:'Space Grotesk',sans-serif;--font-body:'Inter',sans-serif;--radius-md:10px;--radius-lg:16px;--shadow-sm:0 2px 10px rgba(0,0,0,.35);--shadow-lg:0 10px 36px rgba(0,0,0,.5)}
+:root{color-scheme:dark;
+ /* 3 colores base (editables en Ajustes → Apariencia): azul = fondos, amarillo = botones, rojo = pestañas */
+ --azul:#1a2f61;--amarillo:#ffc933;--rojo:#e3363d;
+ /* tonalidades derivadas de cada color base */
+ --azul-950:color-mix(in srgb,var(--azul) 38%,black);--azul-900:color-mix(in srgb,var(--azul) 60%,black);--azul-800:color-mix(in srgb,var(--azul) 78%,black);--azul-700:var(--azul);--azul-600:color-mix(in srgb,var(--azul) 85%,white);--azul-300:color-mix(in srgb,var(--azul) 40%,white);
+ --amarillo-300:color-mix(in srgb,var(--amarillo) 60%,white);--amarillo-600:color-mix(in srgb,var(--amarillo) 85%,black);--amarillo-soft:color-mix(in srgb,var(--amarillo) 15%,transparent);
+ --rojo-300:color-mix(in srgb,var(--rojo) 55%,white);--rojo-600:color-mix(in srgb,var(--rojo) 80%,black);--rojo-soft:color-mix(in srgb,var(--rojo) 20%,transparent);
+ /* roles de la interfaz */
+ --color-bg:var(--azul-900);--color-surface:var(--azul-800);--color-surface-alt:var(--azul-700);--color-border:var(--azul-600);
+ --color-accent:var(--amarillo);--color-accent-dark:var(--amarillo-600);--color-accent-soft:var(--amarillo-soft);
+ --color-tab:var(--rojo);--color-tab-soft:var(--rojo-soft);
+ --color-text:#f4f1ea;--color-text-muted:var(--azul-300);--color-success:#3fd08f;--color-danger:var(--rojo-300);--color-warning:var(--amarillo-300);
+ --font-display:'Space Grotesk',sans-serif;--font-body:'Inter',sans-serif;--radius-md:10px;--radius-lg:16px;--shadow-sm:0 2px 10px rgba(0,0,0,.35);--shadow-lg:0 10px 36px rgba(0,0,0,.5)}
 body{--bg:var(--color-bg);--card:var(--color-surface);--line:var(--color-border);--acc:var(--color-accent);--ink:var(--color-text);--mute:var(--color-text-muted);--ok:var(--color-success);--bad:var(--color-danger);
  margin:0;font:15px/1.45 var(--font-body);background:var(--bg);color:var(--ink);transition:background .18s,color .18s}
 *,*::before,*::after{box-sizing:border-box}
@@ -60,3 +72,16 @@ th{font-size:.72rem;text-transform:uppercase;letter-spacing:.03em;color:var(--mu
  .sidebar{position:fixed;left:0;top:0;transform:translateX(-100%);transition:transform .18s}.sidebar.open{transform:none}.sidebar-overlay.open{display:block}
  #menu{display:flex}.header{padding:12px 16px}.page-content{padding:16px}.pos{grid-template-columns:1fr}.grid3{grid-template-columns:1fr 1fr}
 }
+
+/* Capa de tonalidades: profundidad con los 3 colores */
+.sidebar,.header{background:var(--azul-950)}
+th{background:var(--azul-900)}
+tbody tr:hover td{background:color-mix(in srgb,var(--azul-600) 22%,transparent)}
+.nav-item:hover{background:color-mix(in srgb,var(--azul-600) 30%,transparent)}
+.nav-item.active{border-left-color:var(--rojo);background:var(--rojo-soft)}
+.subnav-tab:hover{color:var(--amarillo-300)}.subnav-tab.active{border-bottom-color:var(--rojo)}
+.inp:focus{border-color:var(--amarillo-300);box-shadow:0 0 0 3px var(--amarillo-soft)}
+.btn.ghost:hover,.tile:hover{border-color:var(--amarillo-300)}
+.modal-overlay{background:color-mix(in srgb,var(--azul-950) 80%,transparent)}
+.meter i{background:linear-gradient(90deg,var(--amarillo-600),var(--amarillo))}
+::selection{background:var(--amarillo-soft)}

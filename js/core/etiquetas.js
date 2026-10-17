@@ -5,7 +5,7 @@ CC.tags = {
     .map(t => `<span class="chip" style="--c:${t.color}">${CC.ui.esc(t.nombre)}</span>`).join(''),
   picker(ambito, sel = []) {
     return `<div class="tagpick" data-a="${ambito}">${this.lista(ambito).map(t => `<label class="chip ${sel.includes(t.id) ? 'on' : ''}" style="--c:${t.color}"><input type="checkbox" value="${t.id}" hidden ${sel.includes(t.id) ? 'checked' : ''}>${CC.ui.esc(t.nombre)}</label>`).join('')}
-      <div class="add"><input class="inp tn" placeholder="Nueva etiqueta (ej. pares)"><input class="tc" type="color" value="#6c5ce7"><button type="button" class="btn ghost sm" data-add>＋</button></div></div>`;
+      <div class="add"><input class="inp tn" placeholder="Nueva etiqueta (ej. pares)"><input class="tc" type="color" value="#ffc933"><button type="button" class="btn ghost sm" data-add>＋</button></div></div>`;
   },
   // Ventana para renombrar, recolorear y eliminar las etiquetas de un ámbito (cliente | producto).
   gestionar(ambito, fin) {

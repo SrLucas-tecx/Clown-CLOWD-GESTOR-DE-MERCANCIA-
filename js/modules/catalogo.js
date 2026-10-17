@@ -49,7 +49,7 @@
       const q = el.querySelector('#q').value.toLowerCase();
       el.querySelector('#rows').innerHTML = vs.filter(v => CC.nombreVar(v).toLowerCase().includes(q)).map(v => {
         const p = db.get('productos', v.productoId) || {}, mg = v.precio ? Math.round((v.precio - v.costo) / v.precio * 100) : 0;
-        return `<tr><td><b>${E(CC.nombreVar(v))}</b><div class="mute">${E(p.categoria || '')} ${E(v.sku || '')} ${v.origen === 'reventa' ? '<span class="chip" style="--c:#4dabf7">Reventa</span>' : ''}</div></td>
+        return `<tr><td><b>${E(CC.nombreVar(v))}</b><div class="mute">${E(p.categoria || '')} ${E(v.sku || '')} ${v.origen === 'reventa' ? '<span class="chip" style="--c:var(--azul-300)">Reventa</span>' : ''}</div></td>
           <td>${CC.stock(v.id)}</td><td>${ui.money(v.costo)}</td><td>${ui.money(v.precio)}</td><td>${mg}%</td>
           <td class="end"><button class="btn ghost sm" data-e="${v.id}">Editar</button> ${v.origen === 'reventa' ? '' : `<button class="btn ghost sm" data-r="${v.id}">Materiales</button>`} <button class="btn ghost sm" data-a="${v.productoId}">+ Variante</button></td></tr>`;
       }).join('') || '<tr><td colspan="7" class="mute">Aún no hay productos. Crea el primero con «+ Producto».</td></tr>';

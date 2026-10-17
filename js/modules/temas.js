@@ -57,7 +57,7 @@
     sincronizar(); const ts = db.all('temas');
     el.innerHTML = `<div class="bar"><button class="btn" id="n">+ Tema</button><span class="mute">Agrupa pines y stickers por tema. Un producto se une al tema por su «Temática».</span></div><div class="cards">` +
       (ts.map(t => { const ps = de(t);
-        return `<div class="pcard">${t.imagen ? `<img src="${t.imagen}">` : '<div class="ph"></div>'}<div class="pb"><b>${E(t.nombre)}</b> <span class="chip" style="--c:#4dabf7">${t.tipo}</span><div class="mute">${E(t.notas || '')}</div>
+        return `<div class="pcard">${t.imagen ? `<img src="${t.imagen}">` : '<div class="ph"></div>'}<div class="pb"><b>${E(t.nombre)}</b> <span class="chip" style="--c:var(--azul-300)">${t.tipo}</span><div class="mute">${E(t.notas || '')}</div>
           <div class="line"><span>📍 Pines</span><b>${ps.filter(esPin).length}</b></div><div class="line"><span>🖼️ Stickers</span><b>${ps.filter(esSt).length}</b></div><div class="line"><span>Piezas en stock</span><b>${ps.reduce((s, p) => s + stock(p), 0)}</b></div>
           <div class="bar" style="margin:8px 0 0"><button class="btn sm" data-v="${t.id}">Ver más</button><button class="btn ghost sm" data-p="${t.id}">＋ Pin</button><button class="btn ghost sm" data-s="${t.id}">＋ Sticker</button><button class="btn ghost sm" data-e="${t.id}">Editar</button><button class="btn ghost sm" data-d="${t.id}">Eliminar</button></div></div></div>`; }).join('') || '<p class="mute">Crea tu primer tema.</p>') + '</div>';
     el.querySelector('#n').onclick = () => form();

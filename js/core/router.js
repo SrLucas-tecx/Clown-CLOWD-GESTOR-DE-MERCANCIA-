@@ -6,7 +6,7 @@ CC.router = {
     { id: 'ventas', icon: '🛒', label: 'Ventas', paginas: ['ventas', 'clientes'] },
     { id: 'inventario', icon: '📦', label: 'Inventario', paginas: ['inventario', 'compras', 'temas', 'materiales', 'catalogo'] },
     { id: 'negocio', icon: '🎪', label: 'Negocio', paginas: ['eventos', 'caja', 'rentabilidad', 'costos'] },
-    { id: 'ajustes', icon: '⚙️', label: 'Ajustes', paginas: ['respaldo'] }
+    { id: 'ajustes', icon: '⚙️', label: 'Ajustes', paginas: ['respaldo', 'apariencia'] }
   ],
   register(id, title, icon, render) { this.views.push({ id, title, icon, render }); },
   start() {

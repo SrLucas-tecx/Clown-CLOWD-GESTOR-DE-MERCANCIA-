@@ -68,10 +68,13 @@
   CC.router.register('compras', 'Compras', '🧾', el => {
     const cs = db.all('compras').slice().reverse(), ok = cs.filter(c => !c.anulada);
     const k = (t, b) => `<div class="kpi"><small>${t}</small><b>${b}</b></div>`;
-    el.innerHTML = `<div class="bar"><button class="btn" id="n">+ Compra por lote</button><span class="mute">Para lo que compras ya hecho (llaveros, pinzas, pines…). El descuento y el envío se reparten entre los lotes.</span></div>
+    el.innerHTML = `<div class="bar"><button class="btn" id="n">+ Compra por lote</button><button class="btn ghost" id="imp">📥 Importar Excel</button><button class="btn ghost" id="exp">📤 Exportar como mi Excel</button><input type="file" id="fx" accept=".xlsx,.xls" hidden><span class="mute">Para lo que compras ya hecho (llaveros, pinzas, pines…). El descuento y el envío se reparten entre los lotes.</span></div>
       <div class="kpis">${k('Inversión en compras', $(ok.reduce((s, c) => s + c.pagado, 0)))}${k('Piezas compradas', ok.reduce((s, c) => s + c.lineas.reduce((a, l) => a + l.cant, 0), 0))}${k('Compras registradas', ok.length)}</div>` +
       (cs.map(c => `<div class="card ${c.anulada ? 'mute' : ''}"><div class="bar"><div style="flex:1"><h3 style="margin:0">${c.fecha}${c.proveedor ? ' · ' + E(c.proveedor) : ''}${c.anulada ? ' (anulada)' : ''}</h3><span class="mute">${c.lineas.length} producto(s) · ${c.lineas.reduce((s, l) => s + l.cant, 0)} piezas</span></div><b>${$(c.pagado)}</b><button class="btn sm" data-v="${c.id}">Ver más</button></div></div>`).join('') || '<p class="mute">Aún no hay compras. Registra la primera con «+ Compra por lote».</p>');
     el.querySelector('#n').onclick = form;
+    el.querySelector('#imp').onclick = () => el.querySelector('#fx').click();
+    el.querySelector('#fx').onchange = e => { if (e.target.files[0]) CC.intercambio.importar(e.target.files[0]); e.target.value = ''; };
+    el.querySelector('#exp').onclick = () => CC.intercambio.exportar();
     el.onclick = e => { const b = e.target.closest('[data-v]'); if (b) ver(db.get('compras', b.dataset.v)); };
   });
 })();
