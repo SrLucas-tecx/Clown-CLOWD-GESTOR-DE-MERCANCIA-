@@ -5,8 +5,10 @@
     const a = [], $ = ui.money;
     db.all('variantes').forEach(v => {
       const nom = CC.nombreVar(v), s = CC.stock(v.id), r = v.receta || [];
+      if ((db.get('productos', v.productoId) || {}).porConfirmar) a.push(['🟡', `${nom}: producto por confirmar (faltan datos, como el tipo).`]);
       if (s < 0) a.push(['🔴', `${nom}: stock negativo (${s}). Revisa los movimientos o ajusta el inventario.`]);
       else if (v.minimo && s <= v.minimo) a.push(['🟡', `${nom}: stock bajo (${s}, mínimo ${v.minimo}).`]);
+      if (v.precio && v.escCant > 1 && v.escTotal / v.escCant >= v.precio) a.push(['🟡', `${nom}: el precio por cantidad no es menor al precio normal.`]);
       if (!v.precio) a.push(['🟡', `${nom}: falta definir el precio de venta.`]);
       if (v.precio && v.precio <= v.costo) a.push(['🔴', `${nom}: el precio (${$(v.precio)}) no cubre el costo (${$(v.costo)}).`]);
       else if (v.precio && (v.precio - v.costo) / v.precio < .2) a.push(['🟡', `${nom}: margen menor al 20%.`]);
@@ -22,6 +24,7 @@
       if (m.stock <= 0) a.push(['🔴', `${m.nombre}: sin stock.`]);
       else if (m.minimo && m.stock <= m.minimo) a.push(['🟡', `${m.nombre}: material bajo (${m.stock} ${m.unidad}).`]);
     });
+    db.all('pedidos').filter(p => p.estado !== 'Entregado').forEach(p => { const s = CC.semaforoPedido(p); if (s[0] === '🔴') a.push(['🔴', `Pedido ${p.folio}: ${s[1]}.`]); });
     return a.sort((x, y) => x[0] === y[0] ? 0 : x[0] === '🔴' ? -1 : 1);
   };
 })();

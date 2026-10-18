@@ -2,7 +2,7 @@
 window.CC = { schema: 1 };
 CC.db = (() => {
   const KEY = 'clowncloud:v1';
-  const vacio = () => ({ schema: 1, productos: [], variantes: [], movimientos: [], ventas: [], eventos: [], gastos: [], etiquetas: [], clientes: [], materiales: [], temas: [], compras: [] });
+  const vacio = () => ({ schema: 1, productos: [], variantes: [], movimientos: [], ventas: [], eventos: [], gastos: [], etiquetas: [], clientes: [], materiales: [], temas: [], compras: [], categorias: [], pedidos: [], consultas: [], combos: [], maletas: [] });
   let data; try { data = { ...vacio(), ...JSON.parse(localStorage.getItem(KEY)) }; } catch (e) { data = vacio(); }
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) { CC.ui.toast('No se pudo guardar'); } };
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);

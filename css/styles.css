@@ -85,3 +85,4 @@ tbody tr:hover td{background:color-mix(in srgb,var(--azul-600) 22%,transparent)}
 .modal-overlay{background:color-mix(in srgb,var(--azul-950) 80%,transparent)}
 .meter i{background:linear-gradient(90deg,var(--amarillo-600),var(--amarillo))}
 ::selection{background:var(--amarillo-soft)}
+.logo-img{width:50px;height:auto;flex-shrink:0}

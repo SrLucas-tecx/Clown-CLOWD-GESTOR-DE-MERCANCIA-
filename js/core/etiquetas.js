@@ -9,9 +9,9 @@ CC.tags = {
   },
   // Ventana para renombrar, recolorear y eliminar las etiquetas de un ámbito (cliente | producto).
   gestionar(ambito, fin) {
-    const { db, ui } = CC, E = ui.esc, tabla = ambito === 'cliente' ? 'clientes' : 'productos', self = this;
+    const { db, ui } = CC, E = ui.esc, tabla = ambito === 'cliente' ? 'clientes' : ambito === 'consulta' ? 'consultas' : 'productos', self = this;
     const guardar = m => m.querySelectorAll('.tgr').forEach(r => { const n = r.querySelector('.tn').value.trim(); if (n) db.update('etiquetas', r.dataset.id, { nombre: n, color: r.querySelector('.tc').value }); });
-    ui.modal('Etiquetas de ' + (ambito === 'cliente' ? 'clientes' : 'productos'), this.lista(ambito).map(t => `<div class="tgr" data-id="${t.id}"><input class="inp tn" value="${E(t.nombre)}"><input class="tc" type="color" value="${t.color}"><button type="button" class="btn ghost sm" data-del>Eliminar</button></div>`).join('') || '<p class="mute">Aún no hay etiquetas. Créalas con el ＋ desde un cliente o producto.</p>', m => { guardar(m); fin && fin(); });
+    ui.modal('Etiquetas de ' + (ambito === 'cliente' ? 'clientes' : ambito === 'consulta' ? 'consultas' : 'productos'), this.lista(ambito).map(t => `<div class="tgr" data-id="${t.id}"><input class="inp tn" value="${E(t.nombre)}"><input class="tc" type="color" value="${t.color}"><button type="button" class="btn ghost sm" data-del>Eliminar</button></div>`).join('') || '<p class="mute">Aún no hay etiquetas. Créalas con el ＋ desde un cliente o producto.</p>', m => { guardar(m); fin && fin(); });
     const m = document.getElementById('modal'), base = m.onclick;
     m.onclick = e => {
       const b = e.target.closest('[data-del]'); if (!b) return base(e);

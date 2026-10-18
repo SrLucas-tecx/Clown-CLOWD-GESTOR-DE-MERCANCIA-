@@ -35,3 +35,19 @@
 .warn{color:var(--amarillo-300)}.pos-n{color:var(--color-success)}
 .ir{display:grid;grid-template-columns:1fr 120px 70px;gap:8px;align-items:center;padding:6px 0;border-top:1px dashed var(--line)}
 .tono{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.tono span{width:74px;height:46px;border-radius:10px;border:1px solid var(--line);font-size:.65rem;display:flex;align-items:flex-end;padding:4px;color:#fff;text-shadow:0 1px 2px #000a}
+.cgr{grid-template-columns:56px 1fr auto}
+/* Modo bazar */
+.mb-overlay{display:none;position:fixed;inset:0;z-index:120;flex-direction:column;background:var(--bg)}.mb-overlay.open{display:flex}
+body.mb-activo{overflow:hidden}body.mb-activo .modal-overlay{z-index:130}
+.mb-top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 16px;background:var(--azul-950);border-bottom:1px solid var(--line)}
+.mb-top select{max-width:220px}.mb-pills{display:flex;gap:8px;flex-wrap:wrap;padding:12px 16px 0}.mb-pills .tab{min-height:40px;padding:0 16px}
+.mb-grid{flex:1;overflow-y:auto;padding:14px 16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;align-content:start}
+.mb-tile{position:relative;display:flex;flex-direction:column;gap:4px;text-align:left;min-height:130px;padding:14px;border-radius:var(--radius-lg);background:var(--card);border:2px solid var(--line);color:var(--ink);font:inherit;cursor:pointer}
+.mb-tile:active{transform:scale(.97)}.mb-tile.on{border-color:var(--rojo);background:var(--rojo-soft)}.mb-tile b{line-height:1.2}
+.mb-price{margin-top:auto;font:800 1.5rem var(--font-display)}.mb-badge{position:absolute;top:8px;right:8px;min-width:30px;height:30px;border-radius:99px;background:var(--rojo);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800}
+.mb-ticket{padding:12px 16px;background:var(--azul-950);border-top:1px solid var(--line);display:flex;flex-direction:column;gap:10px}
+.mb-items{display:flex;flex-wrap:wrap;gap:8px;min-height:36px;max-height:100px;overflow-y:auto;align-items:center}
+.mb-chip{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:99px;background:var(--azul-700);overflow:hidden}.mb-chip button{width:38px;height:38px;border:0;background:none;color:var(--ink);font-size:1.1rem;font-weight:800;cursor:pointer}.mb-chip span{padding:0 8px;font-size:.85rem;font-weight:700}
+.mb-pay{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.pay-toggle{display:grid;grid-template-columns:1fr 1fr;gap:8px;min-width:250px;flex:1}
+.pay-toggle button{min-height:48px;border-radius:var(--radius-md);font-weight:800;background:var(--azul-700);border:2px solid var(--line);color:var(--mute);cursor:pointer}.pay-toggle button.on{border-color:var(--acc);background:var(--amarillo-soft);color:var(--ink)}
+.mb-total{display:flex;flex-direction:column;align-items:flex-end;font-size:.75rem;color:var(--mute)}.mb-total b{font:800 1.7rem var(--font-display);color:var(--ink)}

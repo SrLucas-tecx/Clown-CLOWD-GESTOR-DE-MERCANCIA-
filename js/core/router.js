@@ -3,9 +3,10 @@ CC.router = {
   views: [], ultima: {},
   secciones: [
     { id: 'inicio', icon: '🏠', label: 'Inicio', paginas: ['inicio'] },
-    { id: 'ventas', icon: '🛒', label: 'Ventas', paginas: ['ventas', 'clientes'] },
-    { id: 'inventario', icon: '📦', label: 'Inventario', paginas: ['inventario', 'compras', 'temas', 'materiales', 'catalogo'] },
-    { id: 'negocio', icon: '🎪', label: 'Negocio', paginas: ['eventos', 'caja', 'rentabilidad', 'costos'] },
+    { id: 'ventas', icon: '🛒', label: 'Ventas', paginas: ['ventas', 'pedidos', 'promos', 'lista', 'clientes'] },
+    { id: 'inventario', icon: '📦', label: 'Inventario', paginas: ['inventario', 'conteo', 'compras', 'temas', 'materiales', 'catalogo'] },
+    { id: 'negocio', icon: '🎪', label: 'Negocio', paginas: ['eventos', 'maleta', 'caja', 'rentabilidad', 'costos'] },
+    { id: 'reportes', icon: '📊', label: 'Reportes', paginas: ['interes'] },
     { id: 'ajustes', icon: '⚙️', label: 'Ajustes', paginas: ['respaldo', 'apariencia'] }
   ],
   register(id, title, icon, render) { this.views.push({ id, title, icon, render }); },

@@ -20,7 +20,7 @@
   };
 
   function form() {
-    const vs = db.all('variantes').filter(v => !(v.receta || []).length), cats = [...new Set(db.all('productos').map(p => p.categoria).filter(Boolean))];
+    const vs = db.all('variantes').filter(v => !(v.receta || []).length), cats = CC.categorias.lista().map(c => c.nombre);
     const nombreDe = id => id ? CC.nombreVar(db.get('variantes', id)) : '';
     const linea = () => `<div class="cl card" style="padding:12px;margin-bottom:10px"><select class="inp lv"><option value="">➕ Producto nuevo</option>${vs.map(v => `<option value="${v.id}">${E(CC.nombreVar(v))}</option>`).join('')}</select>
       <div class="grid2 ln" style="margin-top:8px"><input class="inp lnm" placeholder="Nombre (ej. Pinzas kawaii)"><input class="inp lct" list="catsc" placeholder="Categoría (Pinzas, Llaveros…)"></div>

@@ -7,16 +7,16 @@
   CC.vendidos = id => -suma(id, t => t === 'venta' || t === 'anulación');
   CC.nombreVar = v => { const p = db.get('productos', v.productoId); return (p ? p.producto : '?') + (v.nombre ? ' · ' + v.nombre : ''); };
   const varForm = (v = {}) => inp('nombre', 'Variante (ej. 1.5" epoxi)', v.nombre) + inp('sku', 'SKU', v.sku) +
-    `<div class="grid3">${inp('costo', 'Costo', v.costo, 'number', 'step="0.01"')}${inp('precio', 'Precio', v.precio, 'number', 'step="0.01"')}${inp('minimo', 'Mínimo', v.minimo, 'number')}</div>${inp('extra', 'Empaque / extras por pieza ($)', v.extra, 'number', 'step="0.01"')}`;
-  const num = o => ({ nombre: o.nombre, sku: o.sku, costo: +o.costo || 0, precio: +o.precio || 0, minimo: +o.minimo || 0, extra: +o.extra || 0 });
+    `<div class="grid3">${inp('costo', 'Costo', v.costo, 'number', 'step="0.01"')}${inp('precio', 'Precio', v.precio, 'number', 'step="0.01"')}${inp('minimo', 'Mínimo', v.minimo, 'number')}</div>${inp('extra', 'Empaque / extras por pieza ($)', v.extra, 'number', 'step="0.01"')}<div class="grid2">${inp('escCant', 'Precio por cantidad: piezas (ej. 3)', v.escCant, 'number')}${inp('escTotal', '…por un total de ($)', v.escTotal, 'number', 'step="0.01"')}</div>`;
+  const num = o => ({ nombre: o.nombre, sku: o.sku, costo: +o.costo || 0, precio: +o.precio || 0, minimo: +o.minimo || 0, extra: +o.extra || 0, escCant: +o.escCant || 0, escTotal: +o.escTotal || 0 });
 
   function nuevo(pre = {}) {
-    const cats = [...new Set(db.all('productos').map(p => p.categoria))];
+    const cats = CC.categorias.lista().map(c => c.nombre);
     ui.modal('Nuevo producto', inp('producto', 'Nombre del diseño') +
       `<div class="grid2"><label>Categoría<input class="inp" name="categoria" list="cats" placeholder="Pines, stickers…" value="${E(pre.categoria || '')}"><datalist id="cats">${cats.map(c => `<option>${E(c)}</option>`).join('')}</datalist></label>${inp('coleccion', 'Temática / colección', pre.coleccion, 'text', 'list="temasl"')}<datalist id="temasl">${db.all('temas').map(t => `<option>${E(t.nombre)}</option>`).join('')}</datalist></div>
-       <label>Etiquetas</label>` + CC.tags.picker('producto') + varForm() + inp('stock', 'Stock inicial', '', 'number'), m => {
+       <label>Estado del producto<select class="inp" name="estado"><option value="ok">Confirmado</option><option value="pendiente">Por confirmar (faltan datos, como el tipo)</option></select></label><label>Etiquetas</label>` + CC.tags.picker('producto') + varForm() + inp('stock', 'Stock inicial', '', 'number'), m => {
       const o = ui.vals(m); if (!o.producto.trim()) { ui.toast('Falta el nombre'); return false; }
-      const p = db.add('productos', { producto: o.producto.trim(), categoria: o.categoria, coleccion: o.coleccion, etiquetas: CC.tags.leer(m) });
+      const p = db.add('productos', { producto: o.producto.trim(), categoria: o.categoria, coleccion: o.coleccion, etiquetas: CC.tags.leer(m), porConfirmar: o.estado === 'pendiente' });
       const v = db.add('variantes', { productoId: p.id, ...num(o) });
       if (+o.stock > 0) CC.mover(v.id, +o.stock, 'entrada', 'Stock inicial');
       CC.router.show();
@@ -49,13 +49,13 @@
       const q = el.querySelector('#q').value.toLowerCase();
       el.querySelector('#rows').innerHTML = vs.filter(v => CC.nombreVar(v).toLowerCase().includes(q)).map(v => {
         const p = db.get('productos', v.productoId) || {}, mg = v.precio ? Math.round((v.precio - v.costo) / v.precio * 100) : 0;
-        return `<tr><td><b>${E(CC.nombreVar(v))}</b><div class="mute">${E(p.categoria || '')} ${E(v.sku || '')} ${v.origen === 'reventa' ? '<span class="chip" style="--c:var(--azul-300)">Reventa</span>' : ''}</div></td>
+        return `<tr><td><b>${E(CC.nombreVar(v))}</b><div class="mute">${E(p.categoria || '')} ${E(v.sku || '')} ${p.porConfirmar ? '<span class="chip" style="--c:var(--amarillo-300)">Por confirmar</span>' : ''} ${v.origen === 'reventa' ? '<span class="chip" style="--c:var(--azul-300)">Reventa</span>' : ''}</div></td>
           <td>${CC.stock(v.id)}</td><td>${ui.money(v.costo)}</td><td>${ui.money(v.precio)}</td><td>${mg}%</td>
-          <td class="end"><button class="btn ghost sm" data-e="${v.id}">Editar</button> ${v.origen === 'reventa' ? '' : `<button class="btn ghost sm" data-r="${v.id}">Materiales</button>`} <button class="btn ghost sm" data-a="${v.productoId}">+ Variante</button></td></tr>`;
+          <td class="end">${p.porConfirmar ? `<button class="btn sm" data-c="${p.id}">Confirmar</button> ` : ''}<button class="btn ghost sm" data-e="${v.id}">Editar</button> ${v.origen === 'reventa' ? '' : `<button class="btn ghost sm" data-r="${v.id}">Materiales</button>`} <button class="btn ghost sm" data-a="${v.productoId}">+ Variante</button></td></tr>`;
       }).join('') || '<tr><td colspan="7" class="mute">Aún no hay productos. Crea el primero con «+ Producto».</td></tr>';
     };
     draw(); el.querySelector('#q').oninput = draw; el.querySelector('#nuevo').onclick = () => nuevo();
     el.querySelector('#rows').onclick = e => { const b = e.target.closest('button'); if (!b) return;
-      b.dataset.e ? variante(null, db.get('variantes', b.dataset.e)) : b.dataset.r ? receta(db.get('variantes', b.dataset.r)) : variante(b.dataset.a); };
+      b.dataset.c ? (db.update('productos', b.dataset.c, { porConfirmar: false }), ui.toast('Producto confirmado'), CC.router.show()) : b.dataset.e ? variante(null, db.get('variantes', b.dataset.e)) : b.dataset.r ? receta(db.get('variantes', b.dataset.r)) : variante(b.dataset.a); };
   });
 })();
