@@ -1,0 +1,381 @@
+/* ==========================================================================
+   CLOWN CLOUD · responsive.css
+   Capa de adaptación a celular y tablet. Se carga DESPUÉS de styles.css y
+   componentes.css, así que solo sobrescribe lo necesario.
+
+   Puntos de corte:
+     ≤ 1100px  laptop chica
+     ≤  900px  tablet: menú lateral pasa a cajón, venta en una columna
+     ≤  600px  celular: formularios de una columna, modales a pantalla completa
+     ≤  380px  celular chico
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   0. Base: nada debe desbordar la pantalla a lo ancho
+   -------------------------------------------------------------------------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+img,
+svg,
+canvas,
+video {
+  max-width: 100%;
+  height: auto;
+}
+
+.main-area,
+.page-content,
+#view {
+  min-width: 0; /* permite que el contenido se encoja dentro de grid/flex */
+}
+
+/* --------------------------------------------------------------------------
+   1. Tablas: se desplazan de lado dentro de su tarjeta, no rompen la página
+   -------------------------------------------------------------------------- */
+.card {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.card table {
+  min-width: 520px;
+}
+
+/* --------------------------------------------------------------------------
+   2. Rejillas flexibles (sirven en cualquier tamaño)
+   -------------------------------------------------------------------------- */
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 14px;
+}
+
+.bar {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* --------------------------------------------------------------------------
+   3. Laptop chica
+   -------------------------------------------------------------------------- */
+@media (max-width: 1100px) {
+  .grid3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* --------------------------------------------------------------------------
+   4. Tablet (≤ 900px)
+   -------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+
+  /* 4.1 Menú lateral como cajón que se abre con ☰ */
+  .app-layout {
+    display: block;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 60;
+    width: min(280px, 82vw);
+    transform: translateX(-100%);
+    transition: transform .25s ease;
+    overflow-y: auto;
+    padding-top: env(safe-area-inset-top, 0);
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: none;
+    background: rgba(0, 0, 0, .55);
+  }
+
+  .sidebar-overlay.open {
+    display: block;
+  }
+
+  .main-area {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  /* 4.2 Encabezado: se acomoda en dos filas si hace falta */
+  .header {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 12px;
+    padding-top: calc(10px + env(safe-area-inset-top, 0));
+  }
+
+  .header-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 1.1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .header .btn {
+    padding: 0 12px;
+    font-size: .85rem;
+  }
+
+  .page-content {
+    padding: 12px;
+  }
+
+  /* 4.3 Pestañas de sección: una sola línea con desplazamiento horizontal */
+  .subnav,
+  .tabs,
+  .seg,
+  .flt,
+  .mb-pills {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .subnav::-webkit-scrollbar,
+  .tabs::-webkit-scrollbar,
+  .seg::-webkit-scrollbar,
+  .flt::-webkit-scrollbar,
+  .mb-pills::-webkit-scrollbar {
+    display: none;
+  }
+
+  .subnav-tab,
+  .tab,
+  .seg button,
+  .flt .chip,
+  .mb-pills .tab {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  /* 4.4 Pantalla de venta: productos arriba, ticket abajo */
+  .pos {
+    grid-template-columns: 1fr;
+  }
+
+  .tiles {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  }
+}
+
+/* --------------------------------------------------------------------------
+   5. Celular (≤ 600px)
+   -------------------------------------------------------------------------- */
+@media (max-width: 600px) {
+
+  /* 5.1 Formularios y rejillas de una columna */
+  .grid2,
+  .grid3 {
+    grid-template-columns: 1fr;
+  }
+
+  .kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cards {
+    grid-template-columns: 1fr;
+  }
+
+  /* Filas de formularios armadas con estilos en línea (pedidos, combos, maleta) */
+  .cl2 {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .cl2 > :first-child {
+    grid-column: 1 / -1;
+  }
+
+  /* Filas del importador de Excel */
+  .ir {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Filas clave–valor de la ventana «Ver más» */
+  .qd-row {
+    flex-wrap: wrap;
+    gap: 2px 12px;
+  }
+
+  /* 5.2 Campos y botones cómodos para el dedo (16px evita el zoom de iOS) */
+  .inp,
+  select,
+  input,
+  textarea {
+    font-size: 16px;
+    min-height: 44px;
+    max-width: 100%;
+  }
+
+  .btn {
+    min-height: 44px;
+  }
+
+  .btn.sm {
+    min-height: 38px;
+  }
+
+  .bar .inp,
+  .bar select {
+    flex: 1 1 100%;
+    max-width: 100% !important; /* anula los max-width en línea de algunos módulos */
+  }
+
+  /* 5.3 Tarjetas y tablas más compactas */
+  .card {
+    padding: 12px;
+  }
+
+  .card table {
+    min-width: 460px;
+    font-size: .85rem;
+  }
+
+  /* 5.4 Ventanas emergentes a casi pantalla completa */
+  .modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .modal-box {
+    width: 100%;
+    max-width: 100% !important;
+    max-height: 94dvh;
+    border-radius: 16px 16px 0 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .modal-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .modal-footer {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0));
+  }
+
+  .modal-footer .btn {
+    flex: 1 1 auto;
+  }
+
+  /* 5.5 Aviso flotante (toast) ocupa el ancho disponible */
+  #toast {
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-width: none;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0));
+  }
+
+  /* 5.6 Modo bazar: productos arriba, ticket y cobro fijos abajo */
+  .mb-top {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 12px;
+    padding-top: calc(8px + env(safe-area-inset-top, 0));
+  }
+
+  .mb-top .inp {
+    flex: 1 1 100%;
+    max-width: 100% !important;
+  }
+
+  .mb-grid {
+    grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+    gap: 8px;
+    padding: 8px 12px;
+  }
+
+  .mb-tile {
+    min-height: 96px;
+    padding: 8px;
+  }
+
+  .mb-ticket {
+    max-height: 44vh;
+    overflow-y: auto;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0));
+  }
+
+  .mb-pay {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .mb-pay .btn {
+    flex: 1 1 auto;
+  }
+
+  #mbc {
+    padding: 0 20px !important; /* sobrescribe el padding en línea del botón Cobrar */
+  }
+
+  /* 5.7 Apariencia: muestra de tonos en dos columnas */
+  .tono {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* --------------------------------------------------------------------------
+   6. Celular chico (≤ 380px)
+   -------------------------------------------------------------------------- */
+@media (max-width: 380px) {
+  .header .btn {
+    flex: 1 1 auto;
+    font-size: .78rem;
+  }
+
+  .kpis {
+    grid-template-columns: 1fr;
+  }
+
+  .tiles,
+  .mb-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* --------------------------------------------------------------------------
+   7. Preferencias del usuario
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .sidebar {
+    transition: none;
+  }
+}

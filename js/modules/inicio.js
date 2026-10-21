@@ -1,6 +1,6 @@
 // Resumen del negocio.
 (() => {
-  const { db, ui } = CC;
+  const {db, ui} = CC;
   CC.router.register('inicio', 'Inicio', '🏠', el => {
     const hoy = ui.hoy(), vs = CC.ventasOk(), vh = vs.filter(v => v.fecha === hoy), vm = vs.filter(v => v.fecha.slice(0, 7) === hoy.slice(0, 7)), sum = a => a.reduce((s, v) => s + v.total, 0);
     const vars = db.all('variantes'), al = CC.alertas();

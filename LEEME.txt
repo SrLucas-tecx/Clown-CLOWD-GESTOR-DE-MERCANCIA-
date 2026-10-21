@@ -1,0 +1,9 @@
+CLOWN CLOUD - estructura del proyecto
+  index.html
+  css/styles.css, css/componentes.css   <- TUS archivos (no vinieron en lo que me pasaste)
+  css/responsive.css                    <- NUEVO: adaptación a celular y tablet
+  img/logo-payaso.svg                   <- TU archivo
+  js/app.js
+  js/core/     db, ui, router, etiquetas, categorias, excel, logos, pdf, semilla
+  js/modules/  inicio, ventas, catalogo, inventario, ... intercambio
+Copia las carpetas css/ e img/ tuyas encima de esta (sin borrar responsive.css).

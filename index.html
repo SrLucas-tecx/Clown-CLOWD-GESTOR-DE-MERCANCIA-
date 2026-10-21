@@ -1,64 +1,92 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
-<meta charset="utf-8">
-<meta name="color-scheme" content="dark">
-<link rel="icon" type="image/svg+xml" href="img/logo-payaso.svg">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CLOWN CLOUD</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css">
-<link rel="stylesheet" href="css/componentes.css">
+  <meta charset="utf-8">
+  <meta name="color-scheme" content="dark">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>CLOWN CLOUD</title>
+  <link rel="icon" type="image/svg+xml" href="img/logo-payaso.svg">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Estilos (responsive.css va al final para poder sobrescribir) -->
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/componentes.css">
+  <link rel="stylesheet" href="css/responsive.css">
 </head>
+
 <body>
-<div class="app-layout">
-  <aside class="sidebar" id="side">
-    <div class="sidebar-logo"><img class="logo-img" src="img/logo-payaso.svg" alt="Clown Cloud"><span class="logo-word">CLOWN CLOUD</span></div>
-    <nav class="sidebar-nav" id="nav"></nav>
-    
-  </aside>
-  <div class="sidebar-overlay" id="ov"></div>
-  <div class="main-area">
-    <header class="header"><button class="btn-icon" id="menu" title="Menú">☰</button><h1 class="header-title" id="title"></h1><button class="btn ghost" id="mb">🛍️ Modo bazar</button><button class="btn ghost" id="cq">❓ Consulta</button><button class="btn" id="cta">⚡ Venta rápida</button></header>
-    <div class="page-content"><div class="subnav" id="subnav"></div><div id="view"></div></div>
+  <div class="app-layout">
+    <aside class="sidebar" id="side">
+      <div class="sidebar-logo">
+        <img class="logo-img" src="img/logo-payaso.svg" alt="Clown Cloud">
+        <span class="logo-word">CLOWN CLOUD</span>
+      </div>
+      <nav class="sidebar-nav" id="nav"></nav>
+    </aside>
+
+    <div class="sidebar-overlay" id="ov"></div>
+
+    <div class="main-area">
+      <header class="header">
+        <button class="btn-icon" id="menu" title="Menú" aria-label="Abrir menú">☰</button>
+        <h1 class="header-title" id="title"></h1>
+        <button class="btn ghost" id="mb">🛍️ Modo bazar</button>
+        <button class="btn ghost" id="cq">❓ Consulta</button>
+        <button class="btn" id="cta">⚡ Venta rápida</button>
+      </header>
+
+      <div class="page-content">
+        <div class="subnav" id="subnav"></div>
+        <div id="view"></div>
+      </div>
+    </div>
   </div>
-</div>
-<div id="modal" class="modal-overlay"></div><div id="toast"></div>
-<!-- Núcleo -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="js/core/db.js"></script>
-<script src="js/core/ui.js"></script>
-<script src="js/core/router.js"></script>
-<script src="js/core/etiquetas.js"></script>
-<script src="js/core/categorias.js"></script>
-<script src="js/core/excel.js"></script>
-<script src="js/core/logos.js"></script>
-<script src="js/core/pdf.js"></script>
-<script src="js/core/semilla.js"></script>
-<!-- Módulos: el orden define las pestañas -->
-<script src="js/modules/inicio.js"></script>
-<script src="js/modules/ventas.js"></script>
-<script src="js/modules/catalogo.js"></script>
-<script src="js/modules/inventario.js"></script>
-<script src="js/modules/promos.js"></script>
-<script src="js/modules/bazar.js"></script>
-<script src="js/modules/maleta.js"></script>
-<script src="js/modules/listas.js"></script>
-<script src="js/modules/pedidos.js"></script>
-<script src="js/modules/interes.js"></script>
-<script src="js/modules/clientes.js"></script>
-<script src="js/modules/eventos.js"></script>
-<script src="js/modules/caja.js"></script>
-<script src="js/modules/compras.js"></script>
-<script src="js/modules/temas.js"></script>
-<script src="js/modules/materiales.js"></script>
-<script src="js/modules/alertas.js"></script>
-<script src="js/modules/rentabilidad.js"></script>
-<script src="js/modules/costos.js"></script>
-<script src="js/modules/respaldo.js"></script>
-<script src="js/modules/colores.js"></script>
-<script src="js/modules/intercambio.js"></script>
-<script src="js/app.js"></script>
+
+  <div id="modal" class="modal-overlay"></div>
+  <div id="toast"></div>
+
+  <!-- Librerías externas (PDF y Excel) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <!-- Núcleo -->
+  <script src="js/core/db.js"></script>
+  <script src="js/core/ui.js"></script>
+  <script src="js/core/router.js"></script>
+  <script src="js/core/etiquetas.js"></script>
+  <script src="js/core/categorias.js"></script>
+  <script src="js/core/excel.js"></script>
+  <script src="js/core/logos.js"></script>
+  <script src="js/core/pdf.js"></script>
+  <script src="js/core/semilla.js"></script>
+
+  <!-- Módulos: el orden define las pestañas -->
+  <script src="js/modules/inicio.js"></script>
+  <script src="js/modules/ventas.js"></script>
+  <script src="js/modules/catalogo.js"></script>
+  <script src="js/modules/inventario.js"></script>
+  <script src="js/modules/promos.js"></script>
+  <script src="js/modules/bazar.js"></script>
+  <script src="js/modules/maleta.js"></script>
+  <script src="js/modules/listas.js"></script>
+  <script src="js/modules/pedidos.js"></script>
+  <script src="js/modules/interes.js"></script>
+  <script src="js/modules/clientes.js"></script>
+  <script src="js/modules/eventos.js"></script>
+  <script src="js/modules/caja.js"></script>
+  <script src="js/modules/compras.js"></script>
+  <script src="js/modules/temas.js"></script>
+  <script src="js/modules/materiales.js"></script>
+  <script src="js/modules/alertas.js"></script>
+  <script src="js/modules/rentabilidad.js"></script>
+  <script src="js/modules/costos.js"></script>
+  <script src="js/modules/respaldo.js"></script>
+  <script src="js/modules/colores.js"></script>
+  <script src="js/modules/intercambio.js"></script>
+
+  <!-- Arranque -->
+  <script src="js/app.js"></script>
 </body>
+
 </html>
