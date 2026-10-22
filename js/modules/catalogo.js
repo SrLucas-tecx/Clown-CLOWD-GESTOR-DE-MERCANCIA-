@@ -47,7 +47,7 @@
     CC.tags.bind(document.getElementById('modal'));
   }
   CC.nuevoProducto = nuevo;
-  const variante = (productoId, v) => ui.modal(v ? 'Editar variante' : 'Nueva variante', varForm(v), m => {
+  const varianteModal = (productoId, v) => ui.modal(v ? 'Editar variante' : 'Nueva variante', varForm(v), m => {
     const o = num(ui.vals(m));
     v ? db.update('variantes', v.id, o) : db.add('variantes', {
       productoId,
@@ -64,6 +64,15 @@
     const r = (v.receta || []).filter(x => db.get('materiales', x.materialId));
     return r.length ? Math.min(...r.map(x => Math.floor(db.get('materiales', x.materialId).stock / x.cant))) : null;
   };
+  // Si la pieza tiene materiales, su costo se calcula con ellos y aquí no se captura a mano.
+  const variante = (productoId, v) => {
+    varianteModal(productoId, v);
+    if (!v || !(v.receta || []).length) return;
+    const campo = document.querySelector('#modal [name=costo]');
+    campo.disabled = true;
+    campo.closest('label').insertAdjacentHTML('beforeend', '<span class="mute" style="text-transform:none;letter-spacing:0;display:block">Calculado con sus materiales. Para cambiarlo, edita los materiales.</span>');
+  };
+
   function receta(v) {
     const mats = db.all('materiales');
     if (!mats.length)
@@ -80,7 +89,20 @@
       db.update('variantes', v.id, d);
       CC.router.show();
     });
-    document.getElementById('ra').onclick = () => document.getElementById('rf').insertAdjacentHTML('beforeend', fila());
+    // Costo por pieza en vivo, con el desglose por material.
+    const raiz = document.getElementById('modal');
+    document.getElementById('ra').insertAdjacentHTML('afterend', '<div class="card" id="rc-total" style="margin:12px 0 0;font-size:.9rem"></div>');
+    const pintar = () => {
+      const lineas = [...raiz.querySelectorAll('.cr')].map(r => ({m: db.get('materiales', r.querySelector('.rm').value), cant: +r.querySelector('.rc').value || 0})).filter(x => x.m && x.cant > 0);
+      const total = lineas.reduce((s, x) => s + x.m.costo * x.cant, 0);
+      const dinero = n => '$' + n.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 4});
+      raiz.querySelector('#rc-total').innerHTML = lineas.length
+        ? lineas.map(x => `${E(x.m.nombre)}: ${x.cant} × ${dinero(x.m.costo)} = ${dinero(x.m.costo * x.cant)}`).join('<br>') + `<br><b>Costo por pieza: ${dinero(total)}</b>`
+        : '<span class="mute">Agrega materiales y cantidades para calcular el costo por pieza.</span>';
+    };
+    raiz.oninput = raiz.onchange = pintar;
+    document.getElementById('ra').onclick = () => { document.getElementById('rf').insertAdjacentHTML('beforeend', fila()); pintar(); };
+    pintar();
   }
   CC.router.register('catalogo', 'Catálogo', '🏷️', el => {
     const vs = db.all('variantes');

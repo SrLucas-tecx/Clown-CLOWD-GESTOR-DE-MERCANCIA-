@@ -289,15 +289,36 @@
   };
   CC.router.register('respaldo', 'Respaldo', '💾', el => {
     const ult = ls.get(K.ult), d = dias(ult), raw = db.crudo(), urg = (db.all('productos').length || db.all('ventas').length) && (d === null || d > 7), cop = leerCopia();
-    el.innerHTML = `<div class="card"><h3>Estado</h3><p class="${urg ? 'neg' : 'mute'}">${urg ? '⚠️ ' : '💾 '}Último respaldo descargado: ${ult ? cuando(ult) : 'nunca'}</p>
-      <p class="mute">🕒 Último cambio en este dispositivo: ${cuando(cambio())}</p><p class="mute">📊 ${COL.slice(0, 6).map(([k, l]) => `${n(raw, k)} ${l.toLowerCase()}`).join(' · ')}</p>
-      <div style="max-width:300px">${ui.inp('disp', 'Nombre de este dispositivo', ls.get(K.disp) || '', 'text', `placeholder="${disp()}" maxlength="24"`)}</div>
-      <div class="bar"><button class="btn" id="d">⬇️ Descargar respaldo</button><button class="btn ghost" id="s">📤 Enviar a otro dispositivo</button>
-        <label class="btn ghost" style="margin:0;cursor:pointer;text-transform:none;letter-spacing:0;font-size:.83rem">📥 Importar respaldo<input type="file" accept=".json" id="i" hidden></label>${cop ? '<button class="btn ghost" id="r">🛟 Restaurar copia anterior</button>' : ''}</div>
-      <div class="bar"><button class="btn ghost" id="x">📊 Descargar todo en Excel (por columnas)</button></div>
-      <details><summary>¿Cómo lo uso el día de un bazar?</summary><ol class="mute"><li>Antes: descarga el respaldo y pásalo al celular.</li><li>En el celular: Importar respaldo → <b>Reemplazar todo</b>.</li><li>Vende desde el celular.</li><li>Al terminar: «Enviar a otro dispositivo» y mándalo a la computadora.</li><li>En la computadora: Importar → <b>Combinar</b> (suma ventas y movimientos nuevos; el stock se ajusta solo).</li></ol></details></div>
-      <div class="card"><h3>Datos de prueba</h3><p class="mute">Los datos de ejemplo están en <b>js/core/semilla.js</b>: edítalos y vuelve a cargarlos.</p>
-      <div class="bar"><button class="btn ghost" id="p">🧪 Cargar datos de prueba</button><button class="btn ghost" id="b">🗑️ Borrar todos los datos</button></div></div>`;
+    const resumen = COL.slice(0, 6).map(([k, l]) => `${n(raw, k)} ${l.toLowerCase()}`).join(' · ');
+    el.innerHTML = `
+      <div class="grid2" style="align-items:start">
+        <div class="card">
+          <div class="bar" style="margin-bottom:4px">
+            <h3 style="margin:0;flex:1">💾 Respaldo</h3>
+            <span class="${urg ? 'neg' : 'mute'}">${urg ? '⚠️ ' : ''}Último respaldo: ${ult ? cuando(ult) : 'nunca'}</span>
+          </div>
+          <div class="line"><span class="mute">Último cambio en este dispositivo</span><span>${cuando(cambio())}</span></div>
+          <div class="line"><span class="mute">Datos guardados</span><span style="text-align:right">${resumen}</span></div>
+          <div class="bar" style="margin-top:10px;align-items:flex-end">
+            <div style="flex:1;min-width:170px">${ui.inp('disp', 'Nombre de este dispositivo', ls.get(K.disp) || '', 'text', `placeholder="${disp()}" maxlength="24"`)}</div>
+          </div>
+          <div class="bar" style="margin-top:6px">
+            <button class="btn" id="d">⬇️ Descargar</button>
+            <button class="btn ghost" id="s">📤 Enviar a otro dispositivo</button>
+            <label class="btn ghost" style="margin:0;cursor:pointer;text-transform:none;letter-spacing:0;font-size:.83rem">📥 Importar<input type="file" accept=".json" id="i" hidden></label>
+            ${cop ? '<button class="btn ghost" id="r">🛟 Restaurar copia anterior</button>' : ''}
+            <button class="btn ghost" id="x">📊 Excel (por columnas)</button>
+          </div>
+          <details style="margin-top:8px"><summary>¿Cómo lo uso el día de un bazar?</summary>
+            <ol class="mute"><li>Antes: descarga el respaldo y pásalo al celular.</li><li>En el celular: Importar respaldo → <b>Reemplazar todo</b>.</li><li>Vende desde el celular.</li><li>Al terminar: «Enviar a otro dispositivo» y mándalo a la computadora.</li><li>En la computadora: Importar → <b>Combinar</b> (suma ventas y movimientos nuevos; el stock se ajusta solo).</li></ol>
+          </details>
+        </div>
+        <div class="card">
+          <h3 style="margin:0 0 4px">🧪 Datos de prueba</h3>
+          <p class="mute" style="margin:0 0 8px">Los datos de ejemplo están en <b>js/core/semilla.js</b>: edítalos y vuelve a cargarlos.</p>
+          <div class="bar"><button class="btn ghost" id="p">🧪 Cargar datos de prueba</button><button class="btn ghost" id="b">🗑️ Borrar todos los datos</button></div>
+        </div>
+      </div>`;
     const $ = s => el.querySelector(s), nuevo = (msg, fn, ok, aviso) => ui.confirm(msg, ok).then(s => {
         if (!s)
           return;

@@ -31,7 +31,8 @@ CC.router = {
         'conteo',
         'compras',
         'materiales',
-        'catalogo'
+        'catalogo',
+        'costos'
       ]
     },
     {
@@ -42,8 +43,7 @@ CC.router = {
         'eventos',
         'maleta',
         'caja',
-        'rentabilidad',
-        'costos'
+        'rentabilidad'
       ]
     },
     {

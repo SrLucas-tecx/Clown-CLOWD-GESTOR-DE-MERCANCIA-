@@ -137,19 +137,20 @@
       <label>${titulo}
         <span class="mute" style="text-transform:none;letter-spacing:0;display:block">${descripcion}</span>
         <input type="color" data-k="${clave}" value="${colores[clave]}"
-          style="width:100%;height:46px;margin-top:6px;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:3px">
+          style="width:100%;height:38px;margin-top:4px;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:3px">
       </label>`;
 
     el.innerHTML = `
+      <div class="grid2" style="align-items:start">
       <div class="card">
-        <h3>Colores de la interfaz</h3>
-        <p class="mute">Elige 3 colores base; el resto de tonos se calcula solo (el fondo se vuelve casi negro con un matiz de tu azul).</p>
+        <h3 style="margin:0 0 4px">Colores de la interfaz</h3>
+        <p class="mute" style="margin:0 0 8px">Elige 3 colores base; el resto se calcula solo (fondo casi negro con matiz de tu azul).</p>
         <div class="grid3">
           ${selector('azul', '🔵 Azul', 'Matiz de fondos, tarjetas y bordes')}
           ${selector('amarillo', '🟡 Amarillo', 'Botones y resaltados')}
           ${selector('rojo', '🔴 Rojo', 'Pestañas y selección')}
         </div>
-        <div class="bar" style="margin-top:12px">
+        <div class="bar" style="margin-top:8px">
           <button class="btn" type="button">Botón de ejemplo</button>
           <span class="tab on" style="display:inline-flex;align-items:center">Pestaña activa</span>
           <span class="tab" style="display:inline-flex;align-items:center">Pestaña</span>
@@ -158,8 +159,9 @@
         </div>
       </div>
       <div class="card">
-        <h3>Tonalidades</h3>
+        <h3 style="margin:0 0 8px">Tonalidades</h3>
         <div class="tono">${TONOS.map(([nombre, variable]) => `<span style="background:var(${variable})">${nombre}</span>`).join('')}</div>
+      </div>
       </div>`;
 
     el.onchange = e => {

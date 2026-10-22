@@ -1,137 +1,88 @@
-// Maleta de evento (qué llevas, qué regresa y el faltante) y conteo físico del inventario.
+// Maleta: lista de lo que llevas a cada bazar (mesa, cambio, bolsas, terminal…), escrita como texto.
+// La mercancía (pines y stickers) se asigna dentro de cada bazar. Aquí también vive el Conteo físico.
 (() => {
-  const {db, ui} = CC, E = ui.esc, $ = ui.money, PEND = [
-      'Mesa',
-      'Fondo de caja',
-      'Bolsas',
-      'Terminal',
-      'Cartelitos'
-    ];
-  const vend = (ev, vid) => CC.ventasOk().filter(v => v.eventoId === ev).reduce((s, v) => s + v.items.filter(i => i.varianteId === vid).reduce((a, i) => a + i.cant, 0), 0);
-  const esp = (m, i) => Math.max(0, i.llevo - vend(m.eventoId, i.varianteId)), nom = id => CC.nombreVar(db.get('variantes', id) || {});
+  const {db, ui} = CC, E = ui.esc;
+  const norm = s => String(s || '').trim().toLowerCase();
+  const BASE = ['Mesa', 'Cambio para la caja', 'Bolsas', 'Terminal', 'Cartelitos', 'Mantel'];
+  const bazarVigente = id => { const b = db.get('eventos', id); return b && !b.eliminado ? b : null; };
+
+  // Vuelve a dibujar la pantalla sin perder el lugar donde estabas.
+  const refrescar = () => {
+    const y = window.scrollY, contenedor = document.querySelector('.page-content'), yc = contenedor ? contenedor.scrollTop : 0;
+    CC.router.show();
+    window.scrollTo(0, y);
+    if (contenedor) contenedor.scrollTop = yc;
+  };
+
+  const actualizarLista = (maleta, lista) => db.update('maletas', maleta.id, {lista});
+
+  // Crea la lista de un bazar que todavía no tiene.
   function preparar() {
-    const libres = db.all('eventos').filter(e => !db.all('maletas').some(m => m.eventoId === e.id)), vs = db.all('variantes');
-    if (!libres.length)
-      return ui.toast(db.all('eventos').length ? 'Ya hay una maleta para cada bazar. Crea otro bazar primero' : 'Primero crea un bazar en Negocio → Bazares');
-    const linea = () => `<div class="cl2" style="display:grid;grid-template-columns:3fr 1fr;gap:8px;margin-bottom:8px"><select class="inp lv">${vs.map(v => `<option value="${v.id}">${E(CC.nombreVar(v))} (hay ${Math.max(0, CC.stock(v.id))})</option>`).join('')}</select><input class="inp lq" type="number" min="1" placeholder="Llevo"></div>`;
-    ui.modal('Preparar maleta', `<label>Bazar<select class="inp" name="ev">${libres.map(e => `<option value="${e.id}">${E(e.nombre)}</option>`).join('')}</select></label><label>Qué llevas</label><div id="ls">${linea()}</div><button type="button" class="btn ghost sm" id="al">＋ Agregar producto</button>`, m => {
-      const items = [...m.querySelectorAll('.cl2')].map(r => ({
-        varianteId: r.querySelector('.lv').value,
-        llevo: Math.floor(+r.querySelector('.lq').value) || 0
-      })).filter(i => i.llevo);
-      if (!items.length) {
-        ui.toast('Agrega al menos un producto con cantidad');
-        return false;
-      }
-      if (new Set(items.map(i => i.varianteId)).size < items.length) {
-        ui.toast('Hay un producto repetido: usa una sola línea');
-        return false;
-      }
-      const mal = items.find(i => i.llevo > CC.stock(i.varianteId));
-      if (mal) {
-        ui.toast(`No puedes llevar ${mal.llevo} de "${nom(mal.varianteId)}": solo hay ${Math.max(0, CC.stock(mal.varianteId))}`);
-        return false;
-      }
-      db.add('maletas', {
-        eventoId: ui.vals(m).ev,
-        items,
-        lista: PEND.map(t => ({
-          t,
-          ok: false
-        })),
-        cerrada: false
-      });
-      ui.toast('Maleta preparada');
-      CC.router.show();
-    });
-    document.getElementById('al').onclick = () => document.getElementById('ls').insertAdjacentHTML('beforeend', linea());
-  }
-  function cerrar(m) {
-    if (m.cerrada)
-      return ui.toast('Esta maleta ya está cerrada');
-    const ev = db.get('eventos', m.eventoId) || {};
-    ui.modal('Cerrar maleta · ' + E(ev.nombre || ''), '<p class="mute">Cuenta lo que regresó. Si falta algo, se registra como merma.</p>' + m.items.map(i => `<div class="line"><span>${E(nom(i.varianteId))}<div class="mute">llevaste ${i.llevo} · vendiste ${vend(m.eventoId, i.varianteId)} · esperado ${esp(m, i)}</div></span><input class="inp rg" data-v="${i.varianteId}" type="number" min="0" value="${esp(m, i)}" style="width:90px"></div>`).join(''), el => {
-      const reg = [...el.querySelectorAll('.rg')].map(r => ({
-        varianteId: r.dataset.v,
-        regreso: +r.value
-      }));
-      if (reg.some(r => !(r.regreso >= 0))) {
-        ui.toast('No se puede: el regreso no puede ser negativo');
-        return false;
-      }
-      const dif = reg.map(r => ({
-          ...r,
-          d: esp(m, m.items.find(i => i.varianteId === r.varianteId)) - r.regreso
-        })), falta = dif.filter(f => f.d > 0), sobra = dif.filter(f => f.d < 0), nf = falta.reduce((s, f) => s + f.d, 0);
-      const hecho = () => {
-        const copia = JSON.stringify(db.crudo());
-        falta.forEach(f => CC.mover(f.varianteId, -f.d, 'merma', 'Faltante de bazar ' + (ev.nombre || ''), m.id));
-        db.update('maletas', m.id, {
-          cerrada: true,
-          cierre: reg
-        });
-        CC.router.show();
-        ui.deshacer('Maleta cerrada' + (nf ? `: ${nf} pieza(s) como merma` : '') + '.', copia);
-      };
-      if (falta.length || sobra.length) {
-        ui.confirm(`${nf ? `Faltan ${nf} pieza(s) y se registrarán como merma. ` : ''}${sobra.length ? `Sobran piezas en ${sobra.length} producto(s): revisa si anulaste ventas. ` : ''}¿Cerrar la maleta?`, 'Cerrar maleta').then(ok => ok && hecho());
-        return false;
-      }
-      hecho();
+    const libres = db.all('eventos').filter(e => !db.all('maletas').some(m => m.eventoId === e.id));
+    if (!libres.length) return ui.toast(db.all('eventos').length ? 'Todos tus bazares ya tienen su lista' : 'Primero crea un bazar en Negocio → Bazares');
+    ui.modal('Preparar lista de maleta', `
+      <label>Bazar<select class="inp" name="ev">${libres.map(e => `<option value="${e.id}">${E(e.nombre)}</option>`).join('')}</select></label>
+      <label>Empezar con<select class="inp" name="inicio"><option value="base">Lo básico (${E(BASE.join(', '))})</option><option value="vacia">Una lista vacía</option></select></label>`, m => {
+      const o = ui.vals(m);
+      db.add('maletas', {eventoId: o.ev, items: [], lista: o.inicio === 'base' ? BASE.map(t => ({t, ok: false})) : [], cerrada: false});
+      refrescar();
     });
   }
-  function ver(m) {
-    const ev = db.get('eventos', m.eventoId) || {}, ck = m.lista || [];
-    ui.detalle({
-      icon: '🧳',
-      title: 'Maleta · ' + (ev.nombre || ''),
-      sub: m.cerrada ? 'Cerrada' : 'Preparada',
-      secciones: [
-        {
-          t: 'Productos',
-          f: m.items.map(i => [
-            nom(i.varianteId),
-            `llevo ${i.llevo} · vendidas ${vend(m.eventoId, i.varianteId)} · esperado ${esp(m, i)}`
-          ])
-        },
-        {
-          t: 'Pendientes por llevar',
-          html: `<div class="bar" style="flex-wrap:wrap">${ck.map((x, i) => `<button class="btn ${x.ok ? '' : 'ghost'} sm" data-ck="${i}">${x.ok ? '✅' : '⬜'} ${E(x.t)}</button>`).join('')}</div>`
-        }
-      ],
-      acciones: m.cerrada ? [] : [{
-          label: '🔒 Cerrar maleta',
-          fn: () => cerrar(m)
-        }]
-    });
-    const md = document.getElementById('modal'), base = md.onclick;
-    md.onclick = e => {
-      const b = e.target.closest('[data-ck]');
-      if (!b)
-        return base(e);
-      const l = ck.map(x => ({ ...x }));
-      l[b.dataset.ck].ok = !l[b.dataset.ck].ok;
-      db.update('maletas', m.id, { lista: l });
-      ver(db.get('maletas', m.id));
-    };
-  }
+
   CC.router.register('maleta', 'Maleta', '🧳', el => {
-    const ms = db.all('maletas').slice().reverse();
-    el.innerHTML = `<div class="bar"><button class="btn" id="n">+ Preparar maleta</button><span class="mute">Anota lo que llevas a un bazar; al regresar, el sistema calcula lo esperado y registra el faltante.</span></div>` + (ms.map(m => {
-      const ev = db.get('eventos', m.eventoId) || {}, ok = (m.lista || []).filter(x => x.ok).length;
-      return `<div class="card"><div class="bar"><div style="flex:1"><h3 style="margin:0">🧳 ${E(ev.nombre || 'Bazar eliminado')}</h3><span class="mute">${m.items.length} producto(s) · ${m.items.reduce((s, i) => s + i.llevo, 0)} piezas · pendientes ${ok}/${(m.lista || []).length}</span></div><span class="chip" style="--c:${m.cerrada ? 'var(--color-success)' : 'var(--amarillo-300)'}">${m.cerrada ? 'Cerrada' : 'Abierta'}</span><button class="btn sm" data-v="${m.id}">Ver más</button>${m.cerrada ? '' : `<button class="btn ghost sm" data-c="${m.id}">Cerrar</button>`}</div></div>`;
-    }).join('') || '<p class="mute">Aún no hay maletas.</p>');
+    const maletas = db.all('maletas').filter(m => bazarVigente(m.eventoId)).slice().reverse();
+    el.innerHTML = `
+      <div class="bar">
+        <button class="btn" id="n">+ Preparar lista</button>
+        <span class="mute">Anota lo que llevas a cada bazar y márcalo al empacar. Los pines y stickers se asignan dentro del bazar.</span>
+      </div>` + (maletas.map(m => {
+        const bazar = bazarVigente(m.eventoId), lista = m.lista || [], listos = lista.filter(x => x.ok).length;
+        return `
+        <div class="card">
+          <div class="bar">
+            <div style="flex:1"><h3 style="margin:0">🧳 ${E(bazar.nombre)}</h3>
+              <span class="mute">${E(bazar.fecha || '')}${m.cerrada ? ' · 🔒 mercancía cerrada' : ''}</span></div>
+            <span class="chip" style="--c:${listos === lista.length && lista.length ? 'var(--color-success)' : 'var(--amarillo-300)'}">${listos}/${lista.length} listo</span>
+            <button class="btn ghost sm" data-a="reset" data-m="${m.id}">↺ Desmarcar todo</button>
+          </div>
+          ${lista.map((x, i) => `
+            <div class="line" style="gap:8px">
+              <button class="btn ${x.ok ? '' : 'ghost'} sm" data-a="check" data-m="${m.id}" data-i="${i}">${x.ok ? '✅' : '⬜'}</button>
+              <span style="flex:1;${x.ok ? 'text-decoration:line-through;opacity:.6' : ''}">${E(x.t)}</span>
+              <button class="btn ghost sm" data-a="quitar" data-m="${m.id}" data-i="${i}" title="Quitar">✕</button>
+            </div>`).join('') || '<p class="mute">La lista está vacía.</p>'}
+          <div class="bar" style="margin-top:8px">
+            <input class="inp nuevo-item" data-m="${m.id}" placeholder="Ej. extensión eléctrica, lonas, plumones…" style="flex:1">
+            <button class="btn sm" data-a="agregar" data-m="${m.id}">＋ Agregar</button>
+          </div>
+        </div>`;
+      }).join('') || '<p class="mute">Aún no hay listas. Prepara la primera con «+ Preparar lista».</p>');
+
+    const agregar = id => {
+      const maleta = db.get('maletas', id), campo = el.querySelector(`.nuevo-item[data-m="${id}"]`), texto = campo.value.trim();
+      if (!texto) return;
+      const lista = maleta.lista || [];
+      if (lista.some(x => norm(x.t) === norm(texto))) return ui.toast('Eso ya está en la lista');
+      actualizarLista(maleta, [...lista, {t: texto, ok: false}]);
+      refrescar();
+    };
+
     el.querySelector('#n').onclick = preparar;
+    el.onkeydown = e => {
+      if (e.key === 'Enter' && e.target.classList.contains('nuevo-item')) { e.preventDefault(); agregar(e.target.dataset.m); }
+    };
     el.onclick = e => {
       const b = e.target.closest('button');
-      if (!b)
-        return;
-      if (b.dataset.v)
-        ver(db.get('maletas', b.dataset.v));
-      else if (b.dataset.c)
-        cerrar(db.get('maletas', b.dataset.c));
+      if (!b || !b.dataset.a) return;
+      const maleta = db.get('maletas', b.dataset.m), lista = maleta ? (maleta.lista || []) : [], i = +b.dataset.i;
+      if (b.dataset.a === 'agregar') return agregar(b.dataset.m);
+      if (b.dataset.a === 'check') actualizarLista(maleta, lista.map((x, k) => k === i ? {...x, ok: !x.ok} : x));
+      else if (b.dataset.a === 'quitar') actualizarLista(maleta, lista.filter((_, k) => k !== i));
+      else if (b.dataset.a === 'reset') actualizarLista(maleta, lista.map(x => ({...x, ok: false})));
+      refrescar();
     };
   });
+
   CC.router.register('conteo', 'Conteo físico', '🧮', el => {
     const vs = db.all('variantes');
     el.innerHTML = `<div class="bar"><span class="mute">Cuenta lo que hay en físico y escribe el número. Lo que dejes en blanco no se toca.</span><div style="flex:1"></div><button class="btn" id="ap">Aplicar ajustes</button></div>

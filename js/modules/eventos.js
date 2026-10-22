@@ -66,36 +66,56 @@
   // ---------------------------------------------------------------------------------------------
   // Formularios: bazar, costo, ingreso, pago
   // ---------------------------------------------------------------------------------------------
-  const filaCosto = '<div class="grid2 cr"><input class="inp cc" placeholder="Concepto (gasolina, comida…)"><input class="inp cm" type="number" step="0.01" placeholder="$ Monto"></div>';
+  // Una fila de costo dentro de la tarjeta del bazar.
+  const filaCosto = (c = {}) => `
+    <div class="ev-costo" style="display:grid;grid-template-columns:1fr 120px 38px;gap:6px;margin-bottom:6px">
+      <input class="inp cc" placeholder="Concepto (gasolina, comida…)" value="${E(c.concepto || '')}">
+      <input class="inp cm" type="number" step="0.01" placeholder="$ Monto" value="${c.monto ?? ''}">
+      <button type="button" class="btn ghost sm" data-rm title="Quitar">✕</button>
+    </div>`;
 
+  // Nuevo bazar / editar bazar: datos, pagos y costos en una sola tarjeta.
   function form(bazar) {
     const nuevo = !bazar, e = bazar || {};
+    const costosActuales = nuevo ? [] : costosDe(e).filter(c => !c.fijo);
     ui.modal(nuevo ? 'Nuevo bazar' : 'Editar bazar',
       ui.inp('nombre', 'Nombre del bazar', e.nombre) +
       ui.inp('lugar', 'Lugar', e.lugar, 'text', 'placeholder="Ej. Temilenio, Centro Tolzú"') +
       `<div class="grid3">${ui.inp('fecha', 'Fecha de inicio', e.fecha || ui.hoy(), 'date')}${ui.inp('dias', 'Duración (días)', e.dias, 'number')}${ui.inp('mesa', 'Costo de la mesa', e.mesa, 'number', 'step="0.01"')}</div>
-       <div class="grid2">${ui.inp('pagado', 'Ya pagado / apartado', e.pagado, 'number', 'step="0.01"')}${ui.inp('fondoCaja', 'Fondo de caja inicial', e.fondoCaja, 'number', 'step="0.01"')}</div>` +
-      (nuevo ? `<label>Otros costos (opcional)</label><div id="filas">${filaCosto}</div><button type="button" class="btn ghost sm" id="addc">＋ Agregar costo</button>` : ''), m => {
+       <div class="grid2">${ui.inp('pagado', 'Ya pagado / apartado', e.pagado, 'number', 'step="0.01"')}${ui.inp('fondoCaja', 'Fondo de caja inicial', e.fondoCaja, 'number', 'step="0.01"')}</div>
+       <div class="bar" style="margin:10px 0 4px"><b style="flex:1">Costos del bazar</b><span class="mute">Gasolina, comida, bolsas… lo que cuesta ir.</span></div>
+       <div id="filas">${costosActuales.map(filaCosto).join('') || filaCosto()}</div>
+       <div class="bar"><button type="button" class="btn ghost sm" id="addc">＋ Agregar costo</button><span class="mute" id="ev-total" style="margin-left:auto"></span></div>`, m => {
         const o = ui.vals(m);
         if (!o.nombre.trim()) { ui.toast('Falta el nombre'); return false; }
-        const datos = {nombre: o.nombre.trim(), lugar: o.lugar.trim(), fecha: o.fecha, dias: +o.dias || 0, mesa: +o.mesa || 0, pagado: +o.pagado || 0, fondoCaja: +o.fondoCaja || 0};
-        if (nuevo) {
-          const costos = [...m.querySelectorAll('.cr')].map(r => ({concepto: r.querySelector('.cc').value.trim() || 'Otro', monto: +r.querySelector('.cm').value || 0})).filter(c => c.monto > 0);
-          abierto = db.add('eventos', {...datos, costos, ingresos: []}).id;
-        } else db.update('eventos', e.id, datos);
+        const costos = [...m.querySelectorAll('.ev-costo')]
+          .map(r => ({concepto: r.querySelector('.cc').value.trim() || 'Otro', monto: +r.querySelector('.cm').value || 0}))
+          .filter(c => c.monto > 0);
+        const datos = {nombre: o.nombre.trim(), lugar: o.lugar.trim(), fecha: o.fecha, dias: +o.dias || 0, mesa: +o.mesa || 0, pagado: +o.pagado || 0, fondoCaja: +o.fondoCaja || 0, costos};
+        if (nuevo) abierto = db.add('eventos', {...datos, ingresos: []}).id;
+        else {
+          db.update('eventos', e.id, datos);
+          // Los gastos sueltos de versiones anteriores ya quedaron dentro de la lista de costos.
+          db.all('gastos').filter(g => g.eventoId === e.id).forEach(g => db.remove('gastos', g.id));
+        }
         refrescar();
       });
-    if (nuevo) document.getElementById('addc').onclick = () => document.getElementById('filas').insertAdjacentHTML('beforeend', filaCosto);
-  }
 
-  const agregarCosto = id => ui.modal('Agregar costo',
-    ui.inp('concepto', 'Concepto') + ui.inp('monto', 'Monto', '', 'number', 'step="0.01"') +
-    '<label>Tipo<select class="inp" name="tipo"><option value="evento">🎪 Evento (mesa, transporte)</option><option value="produccion">🧵 Producción (material)</option></select></label>', m => {
-      const o = ui.vals(m);
-      if (!(+o.monto > 0)) { ui.toast('Pon un monto'); return false; }
-      db.add('gastos', {eventoId: id, concepto: o.concepto || 'Otro', monto: +o.monto, tipo: o.tipo});
-      refrescar();
-    });
+    const raiz = document.getElementById('modal'), baseClick = raiz.onclick;
+    raiz.querySelector('.modal-box').style.maxWidth = '640px';
+    const total = () => {
+      const suma = [...raiz.querySelectorAll('.cm')].reduce((s, i) => s + (+i.value || 0), 0) + (+raiz.querySelector('[name=mesa]').value || 0);
+      raiz.querySelector('#ev-total').innerHTML = `Costo total: <b>${$(suma)}</b>`;
+    };
+    raiz.oninput = total;
+    raiz.onclick = ev => {
+      if (ev.target.closest('#addc')) { raiz.querySelector('#filas').insertAdjacentHTML('beforeend', filaCosto()); return; }
+      const quitar = ev.target.closest('[data-rm]');
+      if (quitar) { quitar.closest('.ev-costo').remove(); return total(); }
+      baseClick(ev);
+    };
+    total();
+  }
 
   const agregarIngreso = id => ui.modal('Ingreso extra',
     ui.inp('concepto', 'Concepto (rifa, juegos, propinas…)') + ui.inp('monto', 'Monto', '', 'number', 'step="0.01"'), m => {
@@ -113,14 +133,12 @@
       refrescar();
     });
 
-  // Quita un costo o un ingreso de la lista (con «Deshacer»).
-  function quitar(e, tipo, dato) {
+  // Quita un ingreso de la lista (con «Deshacer»).
+  function quitarIngreso(e, indice) {
     const copia = JSON.stringify(db.crudo());
-    if (tipo === 'gasto') db.remove('gastos', dato.id);
-    else if (tipo === 'costos') db.update('eventos', e.id, {costos: (e.costos || []).filter((_, i) => i !== +dato.i)});
-    else if (tipo === 'ingreso') db.update('eventos', e.id, {ingresos: (e.ingresos || []).filter((_, i) => i !== +dato.i)});
+    db.update('eventos', e.id, {ingresos: (e.ingresos || []).filter((_, i) => i !== +indice)});
     refrescar();
-    ui.deshacer('Quitado.', copia);
+    ui.deshacer('Ingreso quitado.', copia);
   }
 
   function eliminar(e) {
@@ -229,6 +247,35 @@
     refrescar();
   }
 
+  // Cierra la mercancía del bazar: cuentas lo que regresó y el faltante se registra como merma.
+  function cerrarMercancia(e) {
+    const maleta = maletaDe(e.id);
+    if (!maleta || !maleta.items.length) return ui.toast('Este bazar no tiene mercancía asignada');
+    if (maleta.cerrada) return ui.toast(ESTA_CERRADA);
+    const items = mercanciaDe(e);
+    ui.modal('Cerrar mercancía · ' + E(e.nombre),
+      '<p class="mute">Cuenta lo que regresó. Si falta algo, se registra como merma.</p>' + items.map(i => `
+        <div class="line"><span>${E(CC.nombreVar(i.v))}<div class="mute">llevaste ${i.llevo} · vendiste ${i.vend} · esperado ${i.rest}</div></span>
+          <input class="inp rg" data-v="${i.v.id}" type="number" min="0" value="${i.rest}" style="width:90px"></div>`).join(''), m => {
+        const reg = [...m.querySelectorAll('.rg')].map(r => ({varianteId: r.dataset.v, regreso: +r.value}));
+        if (reg.some(r => !(r.regreso >= 0))) { ui.toast('No se puede: el regreso no puede ser negativo'); return false; }
+        const dif = reg.map(r => ({...r, d: items.find(i => i.v.id === r.varianteId).rest - r.regreso}));
+        const falta = dif.filter(f => f.d > 0), sobra = dif.filter(f => f.d < 0), piezasFaltan = falta.reduce((s, f) => s + f.d, 0);
+        const hecho = () => {
+          const copia = JSON.stringify(db.crudo());
+          falta.forEach(f => CC.mover(f.varianteId, -f.d, 'merma', 'Faltante de bazar ' + e.nombre, maleta.id));
+          db.update('maletas', maleta.id, {cerrada: true, cierre: reg});
+          refrescar();
+          ui.deshacer('Mercancía cerrada' + (piezasFaltan ? `: ${piezasFaltan} pieza(s) como merma` : '') + '.', copia);
+        };
+        if (falta.length || sobra.length) {
+          ui.confirm(`${piezasFaltan ? `Faltan ${piezasFaltan} pieza(s) y se registrarán como merma. ` : ''}${sobra.length ? `Sobran piezas en ${sobra.length} producto(s): revisa si anulaste ventas. ` : ''}¿Cerrar la mercancía?`, 'Cerrar').then(ok => ok && hecho());
+          return false;
+        }
+        hecho();
+      });
+  }
+
   function quitarMercancia(e, varianteId) {
     if (cerrada(e.id)) return ui.toast(ESTA_CERRADA);
     const vend = vendidasEn(e.id, varianteId);
@@ -303,14 +350,14 @@
 
     el.innerHTML = `
       <div class="bar"><button class="btn ghost" data-a="volver">← Volver a Mis bazares</button><div style="flex:1"></div>
-        <button class="btn ghost" data-a="caja">💰 Ver caja</button><button class="btn ghost" data-a="editar" data-id="${e.id}">✏️ Editar</button><button class="btn ghost" data-a="borrar" data-id="${e.id}">🗑️ Eliminar</button></div>
+        <button class="btn ghost" data-a="caja">💰 Ver caja</button><button class="btn ghost" data-a="pago">💵 Registrar pago</button>${c.items.length && !bloqueada ? '<button class="btn ghost" data-a="cerrar">🔒 Cerrar mercancía</button>' : ''}<button class="btn ghost" data-a="editar" data-id="${e.id}">✏️ Editar</button><button class="btn ghost" data-a="borrar" data-id="${e.id}">🗑️ Eliminar</button></div>
       <h3 style="margin:0">🎪 ${E(e.nombre)}</h3><p class="mute" style="margin:2px 0 10px">${subtitulo(e) || 'Sin fecha ni lugar'}${bloqueada ? ' · 🔒 maleta cerrada' : ''}</p>
 
       <div class="kpis">
         ${kpi('Total vendido', $(c.venta), c.n + ' venta(s)')}
         ${kpi('Ganancia si vendes todo', $(c.estimada), 'ganancia real + lo que falta por vender')}
         ${kpi('❓ Consultas ligadas', c.consultas, 'preguntas hechas en este bazar')}
-        ${kpi('Costo real del bazar', $(c.gas), `Pagado ${$(+e.pagado || 0)} · Saldo ${$(c.pend)}`)}
+        ${kpi('Costo real del bazar', $(c.gas), `Pagado ${$(+e.pagado || 0)} · Saldo ${$(c.pend)} · se edita en ✏️ Editar`)}
         ${kpi('+ Ingresos extra', $(c.extra), 'juegos, rifas, propinas…', 'pos-n')}
         ${kpi('💰 Ganancia real', $(c.neto), 'ventas − costo de producto + extra − costos', c.neto < 0 ? 'neg' : 'pos-n')}
       </div>
@@ -327,11 +374,6 @@
         ${kpi('Valor pendiente', $(pendiente), 'venta potencial de lo que queda')}
       </div>
       ${bloquesTema || `<div class="card" style="text-align:center"><p class="mute">Aún no asignas mercancía a este bazar.</p><button class="btn" data-a="mercancia" data-tema="">＋ Agregar tema</button></div>`}
-
-      <div class="card">
-        <div class="bar"><h3 style="margin:0;flex:1">Costos del bazar</h3><button class="btn ghost sm" data-a="pago">💵 Registrar pago</button><button class="btn sm" data-a="costo">＋ Agregar costo</button></div>
-        ${c.costos.map(x => `<div class="line"><span>${E(x.concepto)}</span><span><b>${$(x.monto)}</b> ${x.fijo ? '' : `<button class="btn ghost sm" data-a="quitarC" data-o="${x.origen}" data-i="${x.i ?? ''}" data-id="${x.id || ''}">✕</button>`}</span></div>`).join('') || '<p class="mute">Sin costos registrados.</p>'}
-      </div>
 
       <div class="card">
         <div class="bar"><div style="flex:1"><h3 style="margin:0">Ingresos extra de este bazar</h3><span class="mute">Dinero que no viene de vender pines o stickers: juegos, rifas, comida, propinas.</span></div><button class="btn sm" data-a="ingreso">＋ Agregar ingreso</button></div>
@@ -361,10 +403,9 @@
         case 'borrar': return eliminar(delBoton);
         case 'caja': CC.cajaSel = actual.id; location.hash = 'caja'; return;
         case 'pago': return registrarPago(actual);
-        case 'costo': return agregarCosto(actual.id);
+        case 'cerrar': return cerrarMercancia(actual);
         case 'ingreso': return agregarIngreso(actual.id);
-        case 'quitarC': return quitar(actual, d.o === 'gasto' ? 'gasto' : 'costos', d);
-        case 'quitarI': return quitar(actual, 'ingreso', d);
+        case 'quitarI': return quitarIngreso(actual, d.i);
         case 'mercancia': return agregarMercancia(actual, d.tema);
         case 'mas': return ajustar(actual, d.v, 1);
         case 'menos': return ajustar(actual, d.v, -1);
