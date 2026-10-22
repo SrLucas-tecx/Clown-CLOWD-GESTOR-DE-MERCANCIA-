@@ -218,6 +218,16 @@ video {
     grid-column: 1 / -1;
   }
 
+  /* Alta rápida (Agregar varios): cada fila en dos columnas */
+  .av-fila {
+    grid-template-columns: 1fr 1fr 1fr !important;
+  }
+
+  .av-fila .av-nombre,
+  .av-fila .av-tipo {
+    grid-column: span 3;
+  }
+
   /* Filas del importador de Excel */
   .ir {
     grid-template-columns: 1fr !important;

@@ -119,13 +119,14 @@
         <div class="bar" style="margin:8px 0 0"><button class="btn ghost sm" data-e="${p.id}">Tarjeta</button><button class="btn ghost sm" data-mv="${pv[0]?.id || ''}">Movimiento</button></div></div></div>`;
     }).join('');
     const movs = db.all('movimientos').slice(-15).reverse();
-    el.innerHTML = `<div class="tabs">${tabs}</div><div class="bar"><div class="seg">${segs}</div><div style="flex:1"></div><button class="btn ghost" id="cg">⚙️ Categorías</button><button class="btn ghost" id="et">🏷️ Etiquetas</button><button class="btn" id="mov">+ Movimiento</button></div>
+    el.innerHTML = `<div class="tabs">${tabs}</div><div class="bar"><div class="seg">${segs}</div><div style="flex:1"></div><button class="btn" id="av">➕ Agregar varios</button><button class="btn ghost" id="cg">⚙️ Categorías</button><button class="btn ghost" id="et">🏷️ Etiquetas</button><button class="btn ghost" id="mov">+ Movimiento</button></div>
       ${usadas.length ? `<div class="flt">${usadas.map(t => `<span class="chip ${tag === t.id ? 'on' : ''}" data-g="${t.id}" style="--c:${t.color}">${E(t.nombre)}</span>`).join('')}</div>` : ''}
       <div class="cards">${cards || '<p class="mute">No hay nada aquí todavía.</p>'}</div>
       <details class="card" style="margin-top:16px"><summary>Últimos movimientos</summary><table><tbody>${movs.map(m => {
       const v = db.get('variantes', m.varianteId);
       return `<tr><td>${m.fecha}</td><td>${E(v ? CC.nombreVar(v) : '?')}</td><td>${m.tipo}</td><td class="${m.cant < 0 ? 'neg' : 'pos-n'}">${m.cant > 0 ? '+' : ''}${m.cant}</td><td class="mute">${E(m.motivo)}</td></tr>`;
     }).join('')}</tbody></table></details>`;
+    el.querySelector('#av').onclick = () => CC.agregarVarios();
     el.querySelector('#mov').onclick = () => mov();
     el.querySelector('#cg').onclick = () => CC.categorias.gestionar(() => CC.router.show());
     el.querySelector('#et').onclick = () => CC.tags.gestionar('producto', () => CC.router.show());

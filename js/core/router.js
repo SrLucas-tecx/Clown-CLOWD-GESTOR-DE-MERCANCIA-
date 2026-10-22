@@ -26,10 +26,10 @@ CC.router = {
       icon: '📦',
       label: 'Inventario',
       paginas: [
+        'temas',
         'inventario',
         'conteo',
         'compras',
-        'temas',
         'materiales',
         'catalogo'
       ]

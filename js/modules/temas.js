@@ -149,39 +149,28 @@
         }]
     });
   }
-  function agregar(t, cat) {
-    if (cat === 'Stickers' && t.tipo === 'Pines')
-      return ui.toast('Este tema es solo de pines. Edítalo y cámbialo a «Ambos» para agregar stickers');
-    if (cat === 'Pines' && t.tipo === 'Stickers')
-      return ui.toast('Este tema es solo de stickers. Edítalo y cámbialo a «Ambos» para agregar pines');
-    CC.nuevoProducto({
-      categoria: cat,
-      coleccion: t.nombre
-    });
-  }
   CC.router.register('temas', 'Temas', '🗂️', el => {
     sincronizar();
     const ts = db.all('temas');
-    el.innerHTML = `<div class="bar"><button class="btn" id="n">+ Tema</button><span class="mute">Agrupa pines y stickers por tema. Un producto se une al tema por su «Temática».</span></div><div class="cards">` + (ts.map(t => {
+    el.innerHTML = `<div class="bar"><button class="btn" id="av">➕ Agregar varios pines y stickers</button><button class="btn ghost" id="n">+ Tema</button></div><div class="cards">` + (ts.map(t => {
       const ps = de(t);
       return `<div class="pcard">${t.imagen ? `<img src="${t.imagen}">` : '<div class="ph"></div>'}<div class="pb"><b>${E(t.nombre)}</b> <span class="chip" style="--c:var(--azul-300)">${t.tipo}</span><div class="mute">${E(t.notas || '')}</div>
           <div class="line"><span>📍 Pines</span><b>${ps.filter(esPin).length}</b></div><div class="line"><span>🖼️ Stickers</span><b>${ps.filter(esSt).length}</b></div><div class="line"><span>Piezas en stock</span><b>${ps.reduce((s, p) => s + stock(p), 0)}</b></div>
-          <div class="bar" style="margin:8px 0 0"><button class="btn sm" data-v="${t.id}">Ver más</button><button class="btn ghost sm" data-p="${t.id}">＋ Pin</button><button class="btn ghost sm" data-s="${t.id}">＋ Sticker</button><button class="btn ghost sm" data-e="${t.id}">Editar</button><button class="btn ghost sm" data-d="${t.id}">Eliminar</button></div></div></div>`;
+          <div class="bar" style="margin:8px 0 0"><button class="btn sm" data-v="${t.id}">Ver más</button><button class="btn ghost sm" data-a="${t.id}">➕ Agregar varios</button><button class="btn ghost sm" data-e="${t.id}">Editar</button><button class="btn ghost sm" data-d="${t.id}">Eliminar</button></div></div></div>`;
     }).join('') || '<p class="mute">Crea tu primer tema.</p>') + '</div>';
     el.querySelector('#n').onclick = () => form();
+    el.querySelector('#av').onclick = () => CC.agregarVarios();
     el.onclick = e => {
       const b = e.target.closest('button');
-      if (!b || b.id === 'n')
+      if (!b || b.id === 'n' || b.id === 'av')
         return;
       const g = k => db.get('temas', b.dataset[k]);
       if (b.dataset.v)
         ver(g('v'));
       else if (b.dataset.e)
         form(g('e'));
-      else if (b.dataset.p)
-        agregar(g('p'), 'Pines');
-      else if (b.dataset.s)
-        agregar(g('s'), 'Stickers');
+      else if (b.dataset.a)
+        CC.agregarVarios(b.dataset.a);
       else if (b.dataset.d) {
         const t = g('d'), n = de(t).length;
         if (n)
