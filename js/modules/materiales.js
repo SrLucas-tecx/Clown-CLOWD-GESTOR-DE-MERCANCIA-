@@ -173,33 +173,118 @@
   }
 
   // ---------------------------------------------------------------------------------------------
-  // Pantalla
+  // Pantalla: carrusel (de uno en uno) o lista completa
   // ---------------------------------------------------------------------------------------------
+  let vista = 'carrusel'; // 'carrusel' | 'todos'
+  let grupoSel = 'Todos';
+  let indice = 0;
+
+  const delGrupo = () => db.all('materiales').filter(m => grupoSel === 'Todos' || m.grupo === grupoSel);
+
+  // Tarjeta grande de un material para el carrusel.
+  const diapositiva = m => {
+    const bajo = m.minimo && m.stock <= m.minimo, n = usos(m).length;
+    return `
+      <div class="pcard" style="max-width:520px;margin:0 auto"><div class="pb">
+        <div class="bar" style="margin:0"><span class="mute" style="flex:1">${E(m.grupo)}</span>${bajo ? '<span class="chip" style="--c:var(--rojo-300)">Resurtir</span>' : ''}</div>
+        <h3 style="margin:2px 0 4px">${E(m.nombre)}</h3>
+        <div class="${bajo ? 'neg' : ''}" style="font:800 2.6rem var(--font-display);line-height:1.1">${m.stock} <small class="mute" style="font-size:1rem">${E(m.unidad)}</small></div>
+        <div class="line"><span>Costo por unidad</span><b>${unidad(m.costo)}</b></div>
+        <div class="line"><span>Valor en stock</span><b>${ui.money(m.stock * m.costo)}</b></div>
+        <div class="line"><span>Mínimo para avisarte</span><b>${m.minimo ? m.minimo + ' ' + E(m.unidad) : '—'}</b></div>
+        <div class="line"><span>Se usa en</span><b>${n ? n + ' producto(s)' : 'ninguno todavía'}</b></div>
+        <div class="bar" style="margin:10px 0 0"><button class="btn sm" data-v="${m.id}">Ver más</button><button class="btn ghost sm" data-s="${m.id}">± Stock</button><button class="btn ghost sm" data-e="${m.id}">✏️ Editar</button></div>
+      </div></div>`;
+  };
+
+  // Cuadrícula de todos los materiales, por grupo.
+  const listaCompleta = materiales => GRUPOS.map(g => `
+    <div class="card">
+      <div class="bar"><h3 style="margin:0;flex:1">${g}</h3><button class="btn ghost sm" data-n="${g}">＋ Agregar</button></div>
+      <div class="cards">${materiales.filter(m => m.grupo === g).map(m => {
+        const bajo = m.minimo && m.stock <= m.minimo;
+        return `<div class="pcard"><div class="pb"><b>${E(m.nombre)}</b>
+          <div class="${bajo ? 'neg' : ''}" style="font:800 1.4rem var(--font-display)">${m.stock} <small class="mute">${E(m.unidad)}</small></div>
+          <div class="mute">${unidad(m.costo)} por ${E(m.unidad)}${bajo ? ' · Resurtir' : ''}</div>
+          <div class="bar" style="margin:8px 0 0"><button class="btn sm" data-v="${m.id}">Ver más</button><button class="btn ghost sm" data-s="${m.id}">± Stock</button></div></div></div>`;
+      }).join('') || '<p class="mute">Sin materiales en este grupo.</p>'}</div>
+    </div>`).join('');
+
   CC.router.register('materiales', 'Materiales', '🧵', el => {
     const materiales = db.all('materiales');
+    const enCarrusel = vista === 'carrusel';
     el.innerHTML = `
-      <div class="bar"><button class="btn" id="n">+ Material</button><button class="btn ghost" id="dv">🧮 Dividir costo</button>
-        <span class="mute">El costo por unidad se calcula con lo que pagaste. El material se descuenta al terminar una producción (Inventario → En proceso → Terminar).</span></div>` +
-      GRUPOS.map(g => `
-        <div class="card">
-          <div class="bar"><h3 style="margin:0;flex:1">${g}</h3><button class="btn ghost sm" data-n="${g}">＋ Agregar</button></div>
-          <div class="cards">${materiales.filter(m => m.grupo === g).map(m => {
-            const bajo = m.minimo && m.stock <= m.minimo;
-            return `<div class="pcard"><div class="pb"><b>${E(m.nombre)}</b>
-              <div class="${bajo ? 'neg' : ''}" style="font:800 1.4rem var(--font-display)">${m.stock} <small class="mute">${E(m.unidad)}</small></div>
-              <div class="mute">${unidad(m.costo)} por ${E(m.unidad)}${bajo ? ' · Resurtir' : ''}</div>
-              <div class="bar" style="margin:8px 0 0"><button class="btn sm" data-v="${m.id}">Ver más</button><button class="btn ghost sm" data-s="${m.id}">± Stock</button></div></div></div>`;
-          }).join('') || '<p class="mute">Sin materiales en este grupo.</p>'}</div>
-        </div>`).join('');
+      <div class="bar">
+        <button class="btn" id="n">+ Material</button>
+        <button class="btn ghost" id="dv">🧮 Dividir costo</button>
+        <button class="btn ghost" data-a="${enCarrusel ? 'todos' : 'carrusel'}">${enCarrusel ? '📋 Ver todos' : '🎠 Ver carrusel'}</button>
+        <span class="mute">El costo por unidad se calcula con lo que pagaste. El material se descuenta al terminar una producción.</span>
+      </div>` + (enCarrusel ? `
+      <div class="seg" id="mt-grupos" style="margin-bottom:10px">${['Todos', ...GRUPOS].map(g =>
+        `<button class="${g === grupoSel ? 'on' : ''}" data-g="${g}">${g} · ${materiales.filter(m => g === 'Todos' || m.grupo === g).length}</button>`).join('')}</div>
+      <div class="card" id="mt-car" style="padding:14px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <button class="btn ghost" data-a="prev" aria-label="Anterior" style="font-size:1.4rem">‹</button>
+          <div id="mt-slide" style="flex:1;min-width:0;touch-action:pan-y"></div>
+          <button class="btn ghost" data-a="next" aria-label="Siguiente" style="font-size:1.4rem">›</button>
+        </div>
+        <div id="mt-info" style="text-align:center;margin-top:10px"></div>
+      </div>` : listaCompleta(materiales));
+
+    // Muestra el material del carrusel que corresponde al índice (con una pequeña animación).
+    const pintar = direccion => {
+      const caja = el.querySelector('#mt-slide');
+      if (!caja) return;
+      const lista = delGrupo();
+      if (!lista.length) {
+        caja.innerHTML = '<p class="mute" style="text-align:center">Sin materiales en este grupo.</p>';
+        el.querySelector('#mt-info').innerHTML = '';
+        return;
+      }
+      indice = (indice + lista.length) % lista.length;
+      caja.innerHTML = diapositiva(lista[indice]);
+      if (direccion) caja.firstElementChild.animate([{opacity: 0, transform: `translateX(${direccion * 24}px)`}, {opacity: 1, transform: 'none'}], {duration: 180, easing: 'ease-out'});
+      el.querySelector('#mt-info').innerHTML = `<span class="mute">${indice + 1} / ${lista.length}</span>` + (lista.length <= 12
+        ? `<div style="margin-top:6px">${lista.map((_, i) => `<button class="btn ghost sm" data-a="dot" data-i="${i}" aria-label="Material ${i + 1}" style="padding:0;width:${i === indice ? 22 : 10}px;min-height:10px;height:10px;border-radius:6px;margin:0 3px;${i === indice ? 'background:var(--amarillo)' : ''}"></button>`).join('')}</div>` : '');
+    };
+    pintar(0);
+
+    // Deslizar con el dedo en el celular.
+    const caja = el.querySelector('#mt-slide');
+    if (caja) {
+      let x0 = null;
+      caja.ontouchstart = e => { x0 = e.touches[0].clientX; };
+      caja.ontouchend = e => {
+        if (x0 === null) return;
+        const dx = e.changedTouches[0].clientX - x0;
+        x0 = null;
+        if (Math.abs(dx) > 50) { indice += dx < 0 ? 1 : -1; pintar(dx < 0 ? 1 : -1); }
+      };
+    }
 
     el.onclick = e => {
       const b = e.target.closest('button');
       if (!b) return;
+      const d = b.dataset;
       if (b.id === 'n') form();
       else if (b.id === 'dv') dividir();
-      else if (b.dataset.n) form({}, b.dataset.n);
-      else if (b.dataset.v) ver(db.get('materiales', b.dataset.v));
-      else if (b.dataset.s) ajustar(db.get('materiales', b.dataset.s));
+      else if (d.a === 'todos' || d.a === 'carrusel') { vista = d.a; CC.router.show(); }
+      else if (d.a === 'prev') { indice--; pintar(-1); }
+      else if (d.a === 'next') { indice++; pintar(1); }
+      else if (d.a === 'dot') { const direccion = +d.i > indice ? 1 : -1; indice = +d.i; pintar(direccion); }
+      else if (d.g) { grupoSel = d.g; indice = 0; CC.router.show(); }
+      else if (d.n) form({}, d.n);
+      else if (d.v) ver(db.get('materiales', d.v));
+      else if (d.s) ajustar(db.get('materiales', d.s));
+      else if (d.e) form(db.get('materiales', d.e));
     };
+  });
+
+  // Flechas del teclado para pasar de material (solo en esta pantalla y sin ventanas abiertas).
+  document.addEventListener('keydown', e => {
+    if (location.hash !== '#materiales' || vista !== 'carrusel' || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return;
+    if (/INPUT|SELECT|TEXTAREA/.test(e.target.tagName) || document.getElementById('modal').classList.contains('open')) return;
+    const boton = document.querySelector(`#mt-car [data-a="${e.key === 'ArrowRight' ? 'next' : 'prev'}"]`);
+    if (boton) boton.click();
   });
 })();
