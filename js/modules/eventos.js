@@ -82,7 +82,7 @@
       ui.inp('nombre', 'Nombre del bazar', e.nombre) +
       ui.inp('lugar', 'Lugar', e.lugar, 'text', 'placeholder="Ej. Temilenio, Centro Tolzú"') +
       `<div class="grid3">${ui.inp('fecha', 'Fecha de inicio', e.fecha || ui.hoy(), 'date')}${ui.inp('dias', 'Duración (días)', e.dias, 'number')}${ui.inp('mesa', 'Costo de la mesa', e.mesa, 'number', 'step="0.01"')}</div>
-       <div class="grid2">${ui.inp('pagado', 'Ya pagado / apartado', e.pagado, 'number', 'step="0.01"')}${ui.inp('fondoCaja', 'Fondo de caja inicial', e.fondoCaja, 'number', 'step="0.01"')}</div>
+       <div class="grid2">${ui.inp('pagado', 'Ya pagado / apartado', e.pagado, 'number', 'step="0.01"')}${ui.inp('fondoCaja', 'Cambio inicial (se cuenta por billetes en Caja)', e.fondoCaja, 'number', 'step="0.01"')}</div>
        <div class="bar" style="margin:10px 0 4px"><b style="flex:1">Costos del bazar</b><span class="mute">Gasolina, comida, bolsas… lo que cuesta ir.</span></div>
        <div id="filas">${costosActuales.map(filaCosto).join('') || filaCosto()}</div>
        <div class="bar"><button type="button" class="btn ghost sm" id="addc">＋ Agregar costo</button><span class="mute" id="ev-total" style="margin-left:auto"></span></div>`, m => {
@@ -91,7 +91,7 @@
         const costos = [...m.querySelectorAll('.ev-costo')]
           .map(r => ({concepto: r.querySelector('.cc').value.trim() || 'Otro', monto: +r.querySelector('.cm').value || 0}))
           .filter(c => c.monto > 0);
-        const datos = {nombre: o.nombre.trim(), lugar: o.lugar.trim(), fecha: o.fecha, dias: +o.dias || 0, mesa: +o.mesa || 0, pagado: +o.pagado || 0, fondoCaja: +o.fondoCaja || 0, costos};
+        const datos = {nombre: o.nombre.trim(), lugar: o.lugar.trim(), fecha: o.fecha, dias: +o.dias || 0, mesa: +o.mesa || 0, pagado: +o.pagado || 0, fondoCaja: (e.cambioDesglose && Object.keys(e.cambioDesglose).length) ? (+e.fondoCaja || 0) : (+o.fondoCaja || 0), costos};
         if (nuevo) abierto = db.add('eventos', {...datos, ingresos: []}).id;
         else {
           db.update('eventos', e.id, datos);
@@ -116,14 +116,6 @@
     };
     total();
   }
-
-  const agregarIngreso = id => ui.modal('Ingreso extra',
-    ui.inp('concepto', 'Concepto (rifa, juegos, propinas…)') + ui.inp('monto', 'Monto', '', 'number', 'step="0.01"'), m => {
-      const o = ui.vals(m), e = db.get('eventos', id);
-      if (!(+o.monto > 0)) { ui.toast('Pon un monto'); return false; }
-      db.update('eventos', id, {ingresos: [...(e.ingresos || []), {concepto: o.concepto || 'Otro', monto: +o.monto}]});
-      refrescar();
-    });
 
   const registrarPago = e => ui.modal('Registrar pago',
     `<p class="mute">Ya pagado: <b>${$(+e.pagado || 0)}</b>. Lo que captures se suma.</p>` + ui.inp('monto', 'Monto del pago', '', 'number', 'step="0.01"'), m => {
@@ -289,6 +281,7 @@
   // ---------------------------------------------------------------------------------------------
   // Pantallas
   // ---------------------------------------------------------------------------------------------
+  const iconoJuego = x => (db.get('juegos', x.juegoId) || {}).icono || (x.juegoId ? '🎲' : '💵');
   const kpi = (titulo, valor, detalle = '', clase = '') => `<div class="kpi"><small>${titulo}</small><b class="${clase}">${valor}</b>${detalle ? `<span class="mute">${detalle}</span>` : ''}</div>`;
   const subtitulo = e => [e.lugar, e.fecha, e.dias ? e.dias + (e.dias === 1 ? ' día' : ' días') : ''].filter(Boolean).map(E).join(' · ');
 
@@ -358,7 +351,7 @@
         ${kpi('Ganancia si vendes todo', $(c.estimada), 'ganancia real + lo que falta por vender')}
         ${kpi('❓ Consultas ligadas', c.consultas, 'preguntas hechas en este bazar')}
         ${kpi('Costo real del bazar', $(c.gas), `Pagado ${$(+e.pagado || 0)} · Saldo ${$(c.pend)} · se edita en ✏️ Editar`)}
-        ${kpi('+ Ingresos extra', $(c.extra), 'juegos, rifas, propinas…', 'pos-n')}
+        ${kpi('🎲 Juegos e ingresos extra', $(c.extra), 'lo contado en juegos, rifas y propinas', 'pos-n')}
         ${kpi('💰 Ganancia real', $(c.neto), 'ventas − costo de producto + extra − costos', c.neto < 0 ? 'neg' : 'pos-n')}
       </div>
       <div class="meter"><i style="width:${c.pct}%"></i></div>
@@ -376,8 +369,13 @@
       ${bloquesTema || `<div class="card" style="text-align:center"><p class="mute">Aún no asignas mercancía a este bazar.</p><button class="btn" data-a="mercancia" data-tema="">＋ Agregar tema</button></div>`}
 
       <div class="card">
-        <div class="bar"><div style="flex:1"><h3 style="margin:0">Ingresos extra de este bazar</h3><span class="mute">Dinero que no viene de vender pines o stickers: juegos, rifas, comida, propinas.</span></div><button class="btn sm" data-a="ingreso">＋ Agregar ingreso</button></div>
-        ${(e.ingresos || []).map((x, i) => `<div class="line"><span>${E(x.concepto)}</span><span><b>${$(x.monto)}</b> <button class="btn ghost sm" data-a="quitarI" data-i="${i}">✕</button></span></div>`).join('') || '<p class="mute">Aún no registras ingresos extra en este bazar.</p>'}
+        <div class="bar"><div style="flex:1"><h3 style="margin:0">🎲 Juegos del bazar</h3>
+          <span class="mute">Lo que se contó en cada juego (ruleta, pesca, rifa…) y otros ingresos.</span></div>
+          <button class="btn sm" data-a="juegos">＋ Agregar juegos</button></div>
+        ${(e.ingresos || []).map((x, i) => ({x, i})).sort((a, b) => String(b.x.fecha || '').localeCompare(String(a.x.fecha || ''))).map(({x, i}) => `
+          <div class="line"><span>${iconoJuego(x)} ${E(x.concepto)}${x.fecha ? ` <span class="mute">· ${E(x.fecha)}</span>` : ''}</span>
+            <span><b>${$(x.monto)}</b> <button class="btn ghost sm" data-a="quitarI" data-i="${i}">✕</button></span></div>`).join('') || '<p class="mute">Aún no registras juegos en este bazar.</p>'}
+        ${(e.ingresos || []).length ? `<div class="line"><span class="mute">Total</span><b>${$(c.extra)}</b></div>` : ''}
       </div>
 
       <div class="card">
@@ -404,7 +402,7 @@
         case 'caja': CC.cajaSel = actual.id; location.hash = 'caja'; return;
         case 'pago': return registrarPago(actual);
         case 'cerrar': return cerrarMercancia(actual);
-        case 'ingreso': return agregarIngreso(actual.id);
+        case 'juegos': return CC.agregarJuego(actual.id);
         case 'quitarI': return quitarIngreso(actual, d.i);
         case 'mercancia': return agregarMercancia(actual, d.tema);
         case 'mas': return ajustar(actual, d.v, 1);

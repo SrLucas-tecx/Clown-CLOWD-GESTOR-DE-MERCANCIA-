@@ -19,7 +19,9 @@ CC.db = (() => {
     pedidos: [],
     consultas: [],
     combos: [],
-    maletas: []
+    maletas: [],
+    juegos: [],
+    tipos: []
   });
   let data;
   try {

@@ -15,6 +15,7 @@ CC.router = {
       label: 'Ventas',
       paginas: [
         'ventas',
+        'historial',
         'pedidos',
         'promos',
         'lista',
@@ -41,6 +42,7 @@ CC.router = {
       label: 'Negocio',
       paginas: [
         'eventos',
+        'juegos',
         'maleta',
         'caja',
         'rentabilidad'
@@ -58,7 +60,8 @@ CC.router = {
       label: 'Ajustes',
       paginas: [
         'respaldo',
-        'apariencia'
+        'apariencia',
+        'tipos'
       ]
     }
   ],

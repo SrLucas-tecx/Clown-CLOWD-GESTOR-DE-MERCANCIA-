@@ -147,6 +147,58 @@
       ui.deshacer(`Pedido ${p.folio} entregado.`, copia);
     });
   }
+  // Color del contorno de cada tarjeta según el estado de producción.
+  const COLOR_ESTADO = {
+    'Por hacer': 'var(--azul-300)',
+    'En producción': 'var(--amarillo)',
+    'Listo': 'var(--color-success, #3fd08f)',
+    'Entregado': 'var(--azul-600)'
+  };
+  const ganancia = p => p.items.reduce((s, i) => s + (i.precio - (i.costo || 0)) * i.cant, 0);
+  const normal = x => String(x || '').trim().toLowerCase();
+  let filtroCliente = 'all'; // 'all' | 'none' | id de cliente
+
+  // Asigna (o cambia) el cliente de un pedido; también permite crear uno nuevo al momento.
+  function asignarCliente(p) {
+    const clientes = db.all('clientes').slice().sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+    ui.modal((p.clienteId ? 'Cambiar cliente · ' : 'Asignar cliente · ') + E(p.folio), `
+      <label>Cliente
+        <select class="inp" name="cliente">
+          <option value="">Sin cliente</option>
+          ${clientes.map(c => `<option value="${c.id}" ${c.id === p.clienteId ? 'selected' : ''}>${E(c.nombre)}</option>`).join('')}
+          <option value="__nuevo__">➕ Cliente nuevo…</option>
+        </select>
+      </label>
+      <div id="pc-nuevo" style="display:none">
+        ${ui.inp('nombre', 'Nombre del cliente')}
+        ${ui.inp('contacto', 'Teléfono o Instagram (opcional)')}
+      </div>`, m => {
+      const o = ui.vals(m);
+      let clienteId = o.cliente;
+      if (clienteId === '__nuevo__') {
+        const nombre = o.nombre.trim();
+        if (!nombre) { ui.toast('Escribe el nombre del cliente nuevo'); return false; }
+        if (clientes.some(c => normal(c.nombre) === normal(nombre))) { ui.toast('Ya existe un cliente con ese nombre: elígelo en la lista'); return false; }
+        clienteId = db.add('clientes', {nombre, contacto: o.contacto.trim(), notas: '', etiquetas: []}).id;
+      }
+      db.update('pedidos', p.id, {clienteId});
+      ui.toast(clienteId ? 'Cliente asignado' : 'Pedido sin cliente');
+      CC.router.show();
+    });
+    const raiz = document.getElementById('modal');
+    raiz.onchange = () => { raiz.querySelector('#pc-nuevo').style.display = raiz.querySelector('[name=cliente]').value === '__nuevo__' ? '' : 'none'; };
+  }
+
+  // Copia un pedido (mismos productos y cliente) como un pedido nuevo por hacer.
+  function duplicar(p) {
+    const entrega = new Date();
+    entrega.setDate(entrega.getDate() + 7);
+    const folio = 'CC-' + (1001 + db.crudo().pedidos.length);
+    db.add('pedidos', {folio, clienteId: p.clienteId, fecha: ui.hoy(), entrega: entrega.toLocaleDateString('sv'), estado: 'Por hacer', anticipo: 0, notas: p.notas || '', items: p.items.map(i => ({...i}))});
+    ui.toast(`Pedido duplicado: ${folio}`);
+    CC.router.show();
+  }
+
   const avanzar = p => {
     const s = ESTADOS[ESTADOS.indexOf(p.estado) + 1];
     if (!s)
@@ -177,6 +229,11 @@
           CC.router.show();
         }
       });
+    ac.push({
+      label: '👤 ' + (p.clienteId ? 'Cambiar cliente' : 'Asignar cliente'),
+      ghost: 1,
+      fn: () => asignarCliente(p)
+    });
     ac.push({
       label: '🗑️ Eliminar',
       ghost: 1,
@@ -248,33 +305,77 @@
       acciones: ac
     });
   }
+  // Tarjeta de un pedido: el contorno y la barra de avance siguen el estado de producción.
+  const tarjeta = p => {
+    const c = p.clienteId ? db.get('clientes', p.clienteId) : null, s = CC.semaforoPedido(p), idx = ESTADOS.indexOf(p.estado);
+    const color = COLOR_ESTADO[p.estado], sig = ESTADOS[idx + 1], sinStock = p.estado === 'Entregado' ? [] : falta(p);
+    const tot = total(p), saldo = Math.max(0, tot - (p.anticipo || 0));
+    return `
+      <div class="card" style="border:2px solid ${color};margin:0;${p.estado === 'Entregado' ? 'opacity:.85' : ''}">
+        <div class="bar" style="margin:0 0 4px;align-items:flex-start">
+          <b style="flex:1;font-size:1.1rem">${s[0]} ${E(p.folio)}</b>
+          <span class="chip" style="--c:${color}">${p.estado}</span>
+        </div>
+        <div class="mute">${c ? '👤 ' + E(c.nombre) : '<b class="warn">Sin cliente</b>'} · ${E(p.fecha)} · ${p.items.length} artículo(s)</div>
+        <div class="mute">🚦 ${s[1]} (${E(p.entrega)})</div>
+        <div style="display:flex;gap:4px;margin:8px 0" title="Avance de producción">
+          ${ESTADOS.map((e, i) => `<i style="flex:1;height:5px;border-radius:3px;background:${i <= idx ? color : 'var(--azul-700)'}"></i>`).join('')}
+        </div>
+        ${sinStock.length ? '<span class="chip" style="--c:var(--amarillo-300)">Falta stock</span>' : ''}
+        <div class="line"><span>Total de venta</span><b>${$(tot)}</b></div>
+        ${p.anticipo ? `<div class="line"><span>Anticipo</span><span>${$(p.anticipo)}</span></div>` : ''}
+        <div class="line"><span>Saldo por cobrar</span><b class="${p.estado === 'Entregado' ? 'pos-n' : saldo ? 'neg' : ''}">${$(p.estado === 'Entregado' ? 0 : saldo)}</b></div>
+        <div class="line"><span>Ganancia</span><b class="pos-n">${$(ganancia(p))}</b></div>
+        <div class="bar" style="margin:10px 0 0">
+          <button class="btn sm" data-v="${p.id}">👁 Ver</button>
+          ${sig ? `<button class="btn ghost sm" data-a="${p.id}">→ ${sig}</button>` : ''}
+          <button class="btn ghost sm" data-c="${p.id}">👤 ${c ? 'Cliente' : 'Asignar cliente'}</button>
+          <button class="btn ghost sm" data-p="${p.id}">📄 PDF</button>
+          <button class="btn ghost sm" data-d="${p.id}">⧉ Duplicar</button>
+        </div>
+      </div>`;
+  };
+
   CC.router.register('pedidos', 'Pedidos', '📋', el => {
-    const todos = db.all('pedidos').slice().reverse(), abiertos = todos.filter(p => p.estado !== 'Entregado'), lista = fe === 'Todos' ? todos : todos.filter(p => p.estado === fe);
-    const k = (t, b, c = '') => `<div class="kpi"><small>${t}</small><b class="${c}">${b}</b></div>`, venc = abiertos.filter(p => CC.semaforoPedido(p)[0] === '🔴').length;
-    el.innerHTML = `<div class="kpis">${k('Pedidos abiertos', abiertos.length)}${k('Por cobrar (saldos)', $(abiertos.reduce((s, p) => s + Math.max(0, total(p) - (p.anticipo || 0)), 0)))}${k('Entregas hoy o vencidas', venc, venc ? 'neg' : '')}</div>
-      <div class="bar"><div class="seg" style="margin:0">${[
-      'Todos',
-      ...ESTADOS
-    ].map(s => `<button class="${fe === s ? 'on' : ''}" data-s="${s}">${s} · ${s === 'Todos' ? todos.length : todos.filter(p => p.estado === s).length}</button>`).join('')}</div><div style="flex:1"></div><button class="btn" id="n">+ Pedido</button></div>` + (lista.map(p => {
-      const c = db.get('clientes', p.clienteId) || {}, s = CC.semaforoPedido(p), f = p.estado === 'Entregado' ? [] : falta(p), sig = ESTADOS[ESTADOS.indexOf(p.estado) + 1];
-      return `<div class="card"><div class="bar"><div style="flex:1"><h3 style="margin:0">${s[0]} ${E(p.folio)} · ${E(c.nombre || 'Sin cliente')}</h3><span class="mute">${p.items.length} producto(s) · ${s[1]} (${p.entrega})</span></div><span class="chip" style="--c:var(--rojo-300)">${p.estado}</span>${f.length ? '<span class="chip" style="--c:var(--amarillo-300)">Falta stock</span>' : ''}<b>${$(total(p))}</b>
-          <button class="btn sm" data-v="${p.id}">Ver más</button>${sig ? `<button class="btn ghost sm" data-a="${p.id}">→ ${sig}</button>` : ''}<button class="btn ghost sm" data-p="${p.id}">📄 PDF</button></div></div>`;
-    }).join('') || '<p class="mute">No hay pedidos aquí. Crea el primero con «+ Pedido».</p>');
+    const clientes = db.all('clientes').slice().sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+    if (filtroCliente !== 'all' && filtroCliente !== 'none' && !clientes.some(c => c.id === filtroCliente)) filtroCliente = 'all';
+    const deCliente = p => filtroCliente === 'all' || (filtroCliente === 'none' ? !p.clienteId : p.clienteId === filtroCliente);
+    const todos = db.all('pedidos').slice().reverse().filter(deCliente);
+    const abiertos = todos.filter(p => p.estado !== 'Entregado');
+    const lista = fe === 'Todos' ? todos : todos.filter(p => p.estado === fe);
+    const vencidos = abiertos.filter(p => CC.semaforoPedido(p)[0] === '🔴').length;
+    const kpi = (titulo, valor, clase = '') => `<div class="kpi"><small>${titulo}</small><b class="${clase}">${valor}</b></div>`;
+
+    el.innerHTML = `
+      <div class="kpis">
+        ${kpi('Pedidos abiertos', abiertos.length)}
+        ${kpi('Por cobrar (saldos)', $(abiertos.reduce((s, p) => s + Math.max(0, total(p) - (p.anticipo || 0)), 0)))}
+        ${kpi('Entregas hoy o vencidas', vencidos, vencidos ? 'neg' : '')}
+      </div>
+      <div class="bar">
+        <div class="seg" style="margin:0">${['Todos', ...ESTADOS].map(st => `<button class="${fe === st ? 'on' : ''}" data-s="${st}">${st} · ${st === 'Todos' ? todos.length : todos.filter(p => p.estado === st).length}</button>`).join('')}</div>
+        <div style="flex:1"></div>
+        <select class="inp" id="fc" style="max-width:220px">
+          <option value="all">Todos los clientes</option>
+          <option value="none" ${filtroCliente === 'none' ? 'selected' : ''}>Sin cliente</option>
+          ${clientes.map(c => `<option value="${c.id}" ${filtroCliente === c.id ? 'selected' : ''}>${E(c.nombre)}</option>`).join('')}
+        </select>
+        <button class="btn" id="n">+ Pedido</button>
+      </div>
+      <div class="cards" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr))">${lista.map(tarjeta).join('') || '<p class="mute">No hay pedidos aquí. Crea el primero con «+ Pedido».</p>'}</div>`;
+
     el.querySelector('#n').onclick = form;
+    el.querySelector('#fc').onchange = e => { filtroCliente = e.target.value; CC.router.show(); };
     el.onclick = e => {
       const b = e.target.closest('button');
-      if (!b)
-        return;
-      const g = k2 => db.get('pedidos', b.dataset[k2]);
-      if (b.dataset.s) {
-        fe = b.dataset.s;
-        CC.router.show();
-      } else if (b.dataset.v)
-        ver(g('v'));
-      else if (b.dataset.a)
-        avanzar(g('a'));
-      else if (b.dataset.p)
-        CC.pdf.pedido(g('p'));
+      if (!b) return;
+      const g = clave => db.get('pedidos', b.dataset[clave]);
+      if (b.dataset.s) { fe = b.dataset.s; CC.router.show(); }
+      else if (b.dataset.v) ver(g('v'));
+      else if (b.dataset.a) avanzar(g('a'));
+      else if (b.dataset.c) asignarCliente(g('c'));
+      else if (b.dataset.p) CC.pdf.pedido(g('p'));
+      else if (b.dataset.d) duplicar(g('d'));
     };
   });
 })();
