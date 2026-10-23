@@ -9,10 +9,16 @@
     const p = db.get('productos', v.productoId);
     return (p ? p.producto : '?') + (v.nombre ? ' · ' + v.nombre : '');
   };
-  const varForm = (v = {}) => inp('nombre', 'Variante (ej. 1.5" epoxi)', v.nombre) + inp('sku', 'SKU', v.sku) + `<div class="grid3">${inp('costo', 'Costo', v.costo, 'number', 'step="0.01"')}${inp('precio', 'Precio', v.precio, 'number', 'step="0.01"')}${inp('minimo', 'Mínimo', v.minimo, 'number')}</div>${inp('extra', 'Empaque / extras por pieza ($)', v.extra, 'number', 'step="0.01"')}<div class="grid2">${inp('escCant', 'Precio por cantidad: piezas (ej. 3)', v.escCant, 'number')}${inp('escTotal', '…por un total de ($)', v.escTotal, 'number', 'step="0.01"')}</div>`;
+  // Lista de tipos de producto (si hay): al elegir uno, el costo se calcula con su material.
+  const tipoSelect = v => {
+    const tipos = db.all('tipos');
+    return tipos.length ? `<label>Tipo de producto (calcula el costo)<select class="inp" name="tipoId"><option value="">— Ninguno: costo manual —</option>${tipos.map(t => `<option value="${t.id}" ${t.id === v.tipoId ? 'selected' : ''}>${E(t.nombre)} (${E(t.categoria)})</option>`).join('')}</select></label>` : '';
+  };
+  const varForm = (v = {}) => inp('nombre', 'Variante (ej. 1.5" epoxi)', v.nombre) + inp('sku', 'SKU', v.sku) + tipoSelect(v) + `<div class="grid3">${inp('costo', 'Costo', v.costo, 'number', 'step="0.01"')}${inp('precio', 'Precio', v.precio, 'number', 'step="0.01"')}${inp('minimo', 'Mínimo', v.minimo, 'number')}</div>${inp('extra', 'Empaque / extras por pieza ($)', v.extra, 'number', 'step="0.01"')}<div class="grid2">${inp('escCant', 'Precio por cantidad: piezas (ej. 3)', v.escCant, 'number')}${inp('escTotal', '…por un total de ($)', v.escTotal, 'number', 'step="0.01"')}</div>`;
   const num = o => ({
     nombre: o.nombre,
     sku: o.sku,
+    tipoId: o.tipoId || '',
     costo: +o.costo || 0,
     precio: +o.precio || 0,
     minimo: +o.minimo || 0,
@@ -20,6 +26,34 @@
     escCant: +o.escCant || 0,
     escTotal: +o.escTotal || 0
   });
+  // Conecta el formulario de variante: el tipo calcula el costo y siempre se muestra el precio sugerido.
+  function conectarCosto(raiz, conReceta) {
+    const tipoSel = raiz.querySelector('[name=tipoId]'), costo = raiz.querySelector('[name=costo]');
+    const precio = raiz.querySelector('[name=precio]'), extra = raiz.querySelector('[name=extra]');
+    if (!costo || !precio || !extra) return;
+    const nota = document.createElement('div');
+    nota.className = 'mute';
+    nota.style.margin = '6px 0 10px';
+    precio.closest('.grid3').insertAdjacentElement('afterend', nota);
+    let sugerido = null;
+    const actualizar = () => {
+      const tipo = tipoSel && !conReceta ? db.get('tipos', tipoSel.value) : null;
+      if (tipo && !tipo.eliminado) { costo.value = CC.costoTipo(tipo); costo.disabled = true; }
+      else if (!conReceta) costo.disabled = false;
+      sugerido = CC.precioSugerido ? CC.precioSugerido((+costo.value || 0) + (+extra.value || 0)) : null;
+      nota.innerHTML = sugerido
+        ? `💡 Precio sugerido (margen ${CC.margenDeseado()}%): <b>${ui.money(sugerido)}</b> <button type="button" class="btn ghost sm" data-sug>Usar sugerido</button>`
+        : 'Escribe el costo para ver un precio sugerido.';
+    };
+    raiz.oninput = raiz.onchange = actualizar;
+    const clicBase = raiz.onclick;
+    raiz.onclick = e => {
+      if (e.target.closest('[data-sug]')) { precio.value = sugerido; return; }
+      clicBase(e);
+    };
+    actualizar();
+  }
+
   function nuevo(pre = {}) {
     const cats = CC.categorias.lista().map(c => c.nombre);
     ui.modal('Nuevo producto', inp('producto', 'Nombre del diseño') + `<div class="grid2"><label>Categoría<input class="inp" name="categoria" list="cats" placeholder="Pines, stickers…" value="${E(pre.categoria || '')}"><datalist id="cats">${cats.map(c => `<option>${E(c)}</option>`).join('')}</datalist></label>${inp('coleccion', 'Temática / colección', pre.coleccion, 'text', 'list="temasl"')}<datalist id="temasl">${db.all('temas').map(t => `<option>${E(t.nombre)}</option>`).join('')}</datalist></div>
@@ -45,6 +79,7 @@
       CC.router.show();
     });
     CC.tags.bind(document.getElementById('modal'));
+    conectarCosto(document.getElementById('modal'), false);
   }
   CC.nuevoProducto = nuevo;
   const varianteModal = (productoId, v) => ui.modal(v ? 'Editar variante' : 'Nueva variante', varForm(v), m => {
@@ -67,10 +102,13 @@
   // Si la pieza tiene materiales, su costo se calcula con ellos y aquí no se captura a mano.
   const variante = (productoId, v) => {
     varianteModal(productoId, v);
-    if (!v || !(v.receta || []).length) return;
-    const campo = document.querySelector('#modal [name=costo]');
-    campo.disabled = true;
-    campo.closest('label').insertAdjacentHTML('beforeend', '<span class="mute" style="text-transform:none;letter-spacing:0;display:block">Calculado con sus materiales. Para cambiarlo, edita los materiales.</span>');
+    const conReceta = !!(v && (v.receta || []).length);
+    if (conReceta) {
+      const campo = document.querySelector('#modal [name=costo]');
+      campo.disabled = true;
+      campo.closest('label').insertAdjacentHTML('beforeend', '<span class="mute" style="text-transform:none;letter-spacing:0;display:block">Calculado con sus materiales. Para cambiarlo, edita los materiales.</span>');
+    }
+    conectarCosto(document.getElementById('modal'), conReceta);
   };
 
   function receta(v) {

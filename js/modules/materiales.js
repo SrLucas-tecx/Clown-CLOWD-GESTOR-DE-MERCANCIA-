@@ -17,6 +17,13 @@
       costo: Math.round(v.receta.reduce((s, r) => { const x = db.get('materiales', r.materialId); return s + (x ? x.costo * r.cant : 0); }, 0) * 100) / 100
     }));
 
+  // Además de las recetas, recalcula las piezas que se calculan con un tipo de producto.
+  const recalcularRecetas = CC.recalcular;
+  CC.recalcular = id => {
+    recalcularRecetas(id);
+    if (CC.recalcularTipos) CC.recalcularTipos(id);
+  };
+
   // ---------------------------------------------------------------------------------------------
   // Nuevo / editar material (costo por unidad calculado)
   // ---------------------------------------------------------------------------------------------
