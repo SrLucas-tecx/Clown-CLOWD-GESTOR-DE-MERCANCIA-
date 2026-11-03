@@ -1,0 +1,12 @@
+# Documentos
+*.doc
+*.docx
+*.docm
+*.dot
+*.dotx
+*.pdf
+*.odt
+*.rtf
+
+# Archivos temporales de Microsoft Word
+~$*.doc*
