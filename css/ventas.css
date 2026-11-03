@@ -1,0 +1,230 @@
+/* ==========================================================================
+   CLOWN CLOUD · ventas.css
+   Venta, Modo bazar y cotizador pensados para el dedo: botones de 44 px o más,
+   rejillas que se adaptan, y el ticket como panel fijo (escritorio) o como
+   hoja que sube desde abajo (tablet y celular).
+   Usa solo las variables de color del tema (--azul-*, --amarillo, --rojo…).
+   ========================================================================== */
+
+/* Campos a todo el ancho dentro de Venta */
+.vt-cab .inp, .vt-ticket .inp, .vt-ticket select { width: 100%; box-sizing: border-box; }
+.vt-ticket label { display: block; margin-top: 6px; }
+
+/* ---------- Pestañas de tema (chips con desplazamiento horizontal) ---------- */
+.vt-temas {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 2px 8px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.vt-temas::-webkit-scrollbar { display: none; }
+
+.vt-chip {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 22px;
+  border: 1px solid var(--azul-600);
+  background: var(--azul-800);
+  color: inherit;
+  font: 600 .92rem var(--font-body, inherit);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.vt-chip small { opacity: .7; font-weight: 500; }
+.vt-chip.on { background: var(--rojo); border-color: var(--rojo); color: #fff; }
+
+/* ---------- Catálogo: tema → sección → recuadros ---------- */
+.vt-tema { margin: 0 0 18px; }
+.vt-tema > h3 { margin: 0 0 6px; display: flex; align-items: baseline; gap: 8px; }
+.vt-seccion { margin: 10px 0 6px; font-weight: 700; color: var(--azul-300); font-size: .85rem; letter-spacing: .04em; text-transform: uppercase; }
+
+.vt-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 10px;
+}
+
+.vt-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  min-height: 118px;
+  border-radius: 14px;
+  border: 2px solid var(--azul-600);
+  background: var(--azul-800);
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color .12s, transform .08s;
+}
+.vt-tile:active { transform: scale(.98); }
+.vt-tile.on { border-color: var(--amarillo); background: var(--azul-700); }
+.vt-tile.agotado { opacity: .45; cursor: not-allowed; }
+.vt-tile-nombre { font-weight: 700; line-height: 1.2; }
+.vt-tile-info { color: var(--azul-300); font-size: .82rem; }
+.vt-tile-info b { color: inherit; }
+
+/* Contador − n + (botones grandes para el dedo) */
+.vt-ctr { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: auto; padding-top: 6px; }
+.vt-ctr b { font: 800 1.6rem var(--font-display, inherit); min-width: 34px; text-align: center; }
+.vt-btn {
+  width: 46px; height: 46px; flex: 0 0 auto;
+  border-radius: 12px; border: 1px solid var(--azul-600);
+  background: var(--azul-700); color: inherit;
+  font: 700 1.4rem/1 var(--font-body, inherit);
+  cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+}
+.vt-btn.mas { background: var(--amarillo); border-color: var(--amarillo); color: #1a1a1a; }
+.vt-btn:disabled { opacity: .35; cursor: not-allowed; }
+
+/* ---------- Pantalla de Venta: catálogo + ticket ---------- */
+.vt { display: grid; grid-template-columns: minmax(0, 1fr) 370px; gap: 16px; align-items: start; }
+.vt-cab { position: sticky; top: 0; z-index: 5; background: var(--azul-900); padding: 6px 0 2px; }
+
+.vt-ticket {
+  position: sticky; top: 8px;
+  background: var(--azul-800); border: 1px solid var(--azul-600); border-radius: 16px;
+  padding: 14px; max-height: calc(100vh - 24px); overflow-y: auto;
+}
+.vt-ticket h3 { margin: 0; flex: 1; }
+.vt-ticket-cab { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.vt-cerrar { display: none; }
+
+.vt-linea { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px dashed var(--azul-600); }
+.vt-linea > span:first-child { flex: 1; min-width: 0; font-size: .92rem; }
+.vt-linea .vt-btn { width: 38px; height: 38px; font-size: 1.2rem; }
+.vt-linea b.n { min-width: 24px; text-align: center; }
+.vt-linea .imp { min-width: 74px; text-align: right; font-weight: 700; }
+
+.vt-total { display: flex; justify-content: space-between; align-items: baseline; margin: 12px 0 8px; font-weight: 700; }
+.vt-total b { font: 800 2rem var(--font-display, inherit); }
+
+/* Forma de pago en botones grandes */
+.vt-seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 6px 0 10px; }
+.vt-seg button {
+  min-height: 48px; border-radius: 12px; border: 1px solid var(--azul-600);
+  background: var(--azul-700); color: inherit; font: 600 .86rem var(--font-body, inherit); cursor: pointer;
+}
+.vt-seg button.on { background: var(--amarillo); border-color: var(--amarillo); color: #1a1a1a; }
+
+/* Calculadora de cambio (solo efectivo) */
+.vt-cambio { background: var(--azul-700); border-radius: 12px; padding: 10px; margin-bottom: 10px; }
+.vt-rapidos { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.vt-rapidos button { min-height: 40px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--azul-600); background: var(--azul-800); color: inherit; cursor: pointer; font-weight: 600; }
+.vt-cambio .resultado { font: 800 1.3rem var(--font-display, inherit); }
+
+.vt-cobrar { width: 100%; min-height: 56px; font-size: 1.1rem; margin-top: 6px; }
+.vt-extra { margin-top: 8px; }
+.vt-extra summary { cursor: pointer; padding: 8px 0; color: var(--azul-300); }
+
+/* Barra inferior (tablet y celular) para abrir el ticket */
+.vt-barra { display: none; }
+.vt-fondo { display: none; }
+
+@media (max-width: 1100px) {
+  .vt { display: block; }
+  .vt-main { padding-bottom: 92px; }
+  .vt-barra {
+    display: flex; align-items: center; gap: 10px;
+    position: fixed; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0)); z-index: 60;
+    min-height: 58px; padding: 0 16px; border-radius: 16px; border: 0;
+    background: var(--amarillo); color: #1a1a1a; font: 700 1rem var(--font-body, inherit);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, .5); cursor: pointer;
+  }
+  .vt-barra .grande { margin-left: auto; font: 800 1.2rem var(--font-display, inherit); }
+  .vt-ticket {
+    position: fixed; left: 0; right: 0; bottom: 0; top: auto; z-index: 80;
+    max-height: 90vh; border-radius: 20px 20px 0 0; border-bottom: 0;
+    padding-bottom: calc(14px + env(safe-area-inset-bottom, 0));
+    transform: translateY(105%); transition: transform .25s ease; visibility: hidden;
+  }
+  .vt-ticket.abierto { transform: none; visibility: visible; }
+  .vt-fondo.abierto { display: block; position: fixed; inset: 0; z-index: 70; background: rgba(0, 0, 0, .6); }
+  .vt-cerrar { display: inline-flex; }
+}
+
+@media (max-width: 600px) {
+  .vt-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .vt-tile { padding: 10px; min-height: 112px; }
+}
+
+/* ---------- Modo bazar (pantalla completa) ---------- */
+.vt-over {
+  display: none; position: fixed; inset: 0; z-index: 200;
+  flex-direction: column; background: var(--azul-900);
+  padding-top: env(safe-area-inset-top, 0);
+}
+.vt-over.open { display: flex; }
+.vt-over-top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--azul-600); }
+.vt-over-top .inp { min-height: 44px; }
+.vt-over-top .espacio { flex: 1; }
+.vt-over-cuerpo { flex: 1; overflow-y: auto; padding: 8px 12px 12px; -webkit-overflow-scrolling: touch; }
+.vt-over .vt-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
+.vt-over-ticket {
+  border-top: 1px solid var(--azul-600); background: var(--azul-800);
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0)); max-height: 46vh; overflow-y: auto;
+}
+.vt-over-items { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; min-height: 40px; }
+.vt-over-item { display: inline-flex; align-items: center; gap: 4px; background: var(--azul-700); border: 1px solid var(--azul-600); border-radius: 12px; padding: 4px 6px; }
+.vt-over-item .vt-btn { width: 36px; height: 36px; font-size: 1.1rem; }
+.vt-over-item span.t { padding: 0 4px; font-size: .88rem; }
+.vt-over-pago { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.vt-over-pago .vt-seg { flex: 1 1 260px; margin: 0; }
+.vt-over-pago .vt-total { margin: 0; gap: 10px; align-items: center; }
+body.mb-activo { overflow: hidden; }
+
+@media (max-width: 700px) {
+  .vt-over .vt-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .vt-over-ticket { max-height: 52vh; }
+  .vt-over-pago .vt-total { width: 100%; justify-content: space-between; }
+  .vt-over-pago .btn { flex: 1 1 auto; }
+}
+
+/* ---------- Tablas que en celular se vuelven tarjetas ---------- */
+@media (max-width: 700px) {
+  table.tabla-resp { min-width: 0 !important; display: block; }
+  table.tabla-resp thead { display: none; }
+  table.tabla-resp tbody, table.tabla-resp tr { display: block; }
+  table.tabla-resp tr { border: 1px solid var(--azul-600); border-radius: 12px; margin-bottom: 10px; padding: 8px 10px; background: var(--azul-800); }
+  table.tabla-resp td { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; border: 0; text-align: right; }
+  table.tabla-resp td::before { content: attr(data-l); color: var(--azul-300); font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; text-align: left; flex: 0 0 auto; }
+  table.tabla-resp td.end { justify-content: flex-end; flex-wrap: wrap; }
+  table.tabla-resp td.end::before { display: none; }
+}
+
+/* ---------- Cotizador de pedidos (4 fases) ---------- */
+.cz-pasos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
+.cz-paso {
+  display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 12px;
+  border-radius: 14px; border: 1px solid var(--azul-600); background: var(--azul-800); color: inherit;
+  font: 600 .95rem var(--font-body, inherit); cursor: pointer; text-align: left;
+}
+.cz-paso .num { flex: 0 0 auto; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--azul-700); font-weight: 700; }
+.cz-paso.on { border-color: var(--rojo); background: var(--rojo-600); }
+.cz-paso.on .num { background: var(--rojo); }
+.cz-paso.hecho .num { background: var(--color-success, #3fd08f); color: #1a1a1a; }
+
+.cz-pie {
+  position: sticky; bottom: 0; z-index: 6; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  margin-top: 14px; padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0));
+  background: var(--azul-800); border: 1px solid var(--azul-600); border-radius: 16px;
+}
+.cz-pie .cifras { display: flex; gap: 18px; flex: 1; }
+.cz-pie small { display: block; color: var(--azul-300); }
+.cz-pie b { font: 800 1.4rem var(--font-display, inherit); }
+.cz-pie .acciones { display: flex; gap: 8px; }
+
+@media (max-width: 700px) {
+  .cz-pasos { grid-template-columns: repeat(2, 1fr); }
+  .cz-paso { min-height: 48px; font-size: .88rem; }
+  .cz-pie .acciones { width: 100%; }
+  .cz-pie .acciones .btn { flex: 1; min-height: 48px; }
+}
+
+/* ---------- Capas: ventanas y avisos siempre por encima del Modo bazar ---------- */
+#modal { z-index: 400; }
+#toast { z-index: 500; }

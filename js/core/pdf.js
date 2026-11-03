@@ -12,6 +12,12 @@ CC.pdf = {
     const cliente = db.get('clientes', p.clienteId) || {};
     const total = CC.pedidoTotal(p), anticipo = p.anticipo || 0;
     const td = 'padding:8px;';
+    // Piezas, recargo urgente, servicios extra y descuento (solo si el pedido los tiene).
+    const d = CC.pedidoDesglose ? CC.pedidoDesglose(p) : null;
+    const fila = (t, v) => `<tr><td style="padding:4px 14px 4px 0;color:#555">${t}</td><td style="text-align:right">${v}</td></tr>`;
+    const filasAjuste = d && (d.extras || d.recargo || d.descuento)
+      ? fila('Piezas', $(d.subtotal)) + (d.recargo ? fila('Recargo por urgente', '+ ' + $(d.recargo)) : '') + (d.extras ? fila('Servicios extra', '+ ' + $(d.extras)) : '') + (d.descuento ? fila('Descuento', '− ' + $(d.descuento)) : '')
+      : '';
 
     const filas = p.items.map(i => `
       <tr style="border-bottom:1px solid #e5e8f0">
@@ -48,6 +54,7 @@ CC.pdf = {
         </table>
 
         <table style="margin:16px 0 0 auto;font-size:14px;min-width:270px;border-collapse:collapse">
+          ${filasAjuste}
           <tr><td style="padding:4px 14px 4px 0;color:#555">Total</td><td style="text-align:right;font-weight:800;color:#1a2f61">${$(total)}</td></tr>
           <tr><td style="padding:4px 14px 4px 0;color:#555">Anticipo</td><td style="text-align:right">${$(anticipo)}</td></tr>
           <tr style="background:#ffc933">

@@ -29,6 +29,7 @@ CC.router = {
       paginas: [
         'temas',
         'inventario',
+        'sorpresa',
         'conteo',
         'compras',
         'materiales',
@@ -43,6 +44,7 @@ CC.router = {
       paginas: [
         'eventos',
         'juegos',
+        'comparativa',
         'maleta',
         'caja',
         'rentabilidad'
@@ -52,7 +54,7 @@ CC.router = {
       id: 'reportes',
       icon: '📊',
       label: 'Reportes',
-      paginas: ['interes']
+      paginas: ['reportes', 'interes']
     },
     {
       id: 'ajustes',
@@ -61,7 +63,8 @@ CC.router = {
       paginas: [
         'respaldo',
         'apariencia',
-        'tipos'
+        'tipos',
+        'reglas'
       ]
     }
   ],

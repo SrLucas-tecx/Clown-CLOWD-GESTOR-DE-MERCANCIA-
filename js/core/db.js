@@ -21,7 +21,8 @@ CC.db = (() => {
     combos: [],
     maletas: [],
     juegos: [],
-    tipos: []
+    tipos: [],
+    sorpresa: []
   });
   let data;
   try {

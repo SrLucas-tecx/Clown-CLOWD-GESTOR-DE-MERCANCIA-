@@ -75,10 +75,10 @@
   CC.router.register('clientes', 'Clientes', '👥', el => {
     el.innerHTML = `<div class="bar"><input class="inp" id="q" placeholder="Buscar cliente…" value="${E(q)}" style="max-width:260px"><div style="flex:1"></div><button class="btn ghost" id="et">🏷️ Etiquetas</button><button class="btn" id="nuevo">+ Cliente</button></div>
       <div class="flt"><span class="chip ${filtro ? '' : 'on'}" data-t="" style="--c:#ffc933">Todos</span>${CC.tags.lista('cliente').map(t => `<span class="chip ${filtro === t.id ? 'on' : ''}" data-t="${t.id}" style="--c:${t.color}">${E(t.nombre)}</span>`).join('')}</div>
-      <div class="card"><table><thead><tr><th>Cliente</th><th>Etiquetas</th><th>Notas</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>`;
+      <div class="card"><table class="tabla-resp"><thead><tr><th>Cliente</th><th>Etiquetas</th><th>Notas</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>`;
     const filas = () => {
       const cs = db.all('clientes').filter(c => (!filtro || (c.etiquetas || []).includes(filtro)) && norm(c.nombre + ' ' + (c.contacto || '')).includes(norm(q)));
-      el.querySelector('#rows').innerHTML = cs.map(c => `<tr><td><b>${E(c.nombre)}</b><div class="mute">${E(c.contacto || '')}</div></td><td>${CC.tags.chips(c.etiquetas)}</td><td class="mute">${E(c.notas || '')}</td>
+      el.querySelector('#rows').innerHTML = cs.map(c => `<tr><td data-l="Cliente"><b>${E(c.nombre)}</b><div class="mute">${E(c.contacto || '')}</div></td><td data-l="Etiquetas">${CC.tags.chips(c.etiquetas)}</td><td class="mute" data-l="Notas">${E(c.notas || '')}</td>
         <td class="end"><button class="btn sm" data-v="${c.id}">Ver más</button> <button class="btn ghost sm" data-e="${c.id}">Editar</button> <button class="btn ghost sm" data-d="${c.id}">Eliminar</button></td></tr>`).join('') || `<tr><td colspan="4" class="mute">${q || filtro ? 'Ningún cliente coincide.' : 'Sin clientes todavía. Agrega el primero con «+ Cliente».'}</td></tr>`;
     };
     filas();

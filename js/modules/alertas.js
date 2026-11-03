@@ -40,7 +40,7 @@
           '🟡',
           `${nom}: margen menor al 20%.`
         ]);
-      if (v.origen === 'reventa') {
+      if ((v.origen === 'reventa' || v.origen === 'sorpresa')) {
         // se compra hecho: no lleva receta
 
       } else if (!r.length)

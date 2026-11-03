@@ -11,7 +11,7 @@
   let mostrando = POR_PAGINA;
 
   const piezasDe = v => v.items.reduce((s, i) => s + i.cant, 0);
-  const gananciaDe = v => v.items.reduce((s, i) => s + (i.precio - i.costo) * i.cant, 0);
+  const gananciaDe = v => v.items.reduce((s, i) => s + (i.precio - i.costo) * i.cant, 0) + (v.ajuste || 0);
   // Junta las piezas del mismo nombre (una venta por tema puede salir de varios diseños).
   const detalleDe = v => {
     const juntos = new Map();
@@ -119,13 +119,13 @@
       </div>
 
       <div class="card">
-        <table>
+        <table class="tabla-resp">
           <thead><tr><th>Fecha</th><th>Detalle</th><th>Bazar</th><th>Pago</th><th>Total</th><th></th></tr></thead>
           <tbody>${ventas.slice(0, mostrando).map(v => `
             <tr class="${v.anulada ? 'mute' : ''}">
-              <td style="white-space:nowrap">${v.fecha}</td>
-              <td>${E(detalleDe(v))}${nombreCliente(v) ? `<div class="mute">👤 ${E(nombreCliente(v))}</div>` : ''}</td>
-              <td>${E(nombreBazar(v))}</td><td>${v.pago}</td><td><b>${$(v.total)}</b></td>
+              <td data-l="Fecha" style="white-space:nowrap">${v.fecha}</td>
+              <td data-l="Detalle">${E(detalleDe(v))}${nombreCliente(v) ? `<div class="mute">👤 ${E(nombreCliente(v))}</div>` : ''}</td>
+              <td data-l="Bazar">${E(nombreBazar(v))}</td><td data-l="Pago">${v.pago}</td><td data-l="Total"><b>${$(v.total)}</b></td>
               <td class="end"><button class="btn ghost sm" data-ver="${v.id}">Ver</button>
                 ${v.anulada ? '<span class="chip" style="--c:var(--rojo-300)">Anulada</span>' : `<button class="btn ghost sm" data-x="${v.id}">Anular</button>`}</td>
             </tr>`).join('') || '<tr><td colspan="6" class="mute">No hay ventas con estos filtros.</td></tr>'}</tbody>
