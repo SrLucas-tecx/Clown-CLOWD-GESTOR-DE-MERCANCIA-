@@ -1,88 +1,87 @@
-// Maleta: lista de lo que llevas a cada bazar (mesa, cambio, bolsas, terminal…), escrita como texto.
-// La mercancía (pines y stickers) se asigna dentro de cada bazar. Aquí también vive el Conteo físico.
+// Lista de maleta de cada bazar (mesa, cambio, bolsas, terminal…), escrita como texto y marcada al empacar.
+// Ya no es una pestaña: vive dentro del detalle de cada bazar (eventos.js) y arranca con la lista
+// predeterminada de Ajustes → General. Aquí también vive el Conteo físico.
 (() => {
   const {db, ui} = CC, E = ui.esc;
   const norm = s => String(s || '').trim().toLowerCase();
   const BASE = ['Mesa', 'Cambio para la caja', 'Bolsas', 'Terminal', 'Cartelitos', 'Mantel'];
-  const bazarVigente = id => { const b = db.get('eventos', id); return b && !b.eliminado ? b : null; };
+  const base = () => CC.ajustes ? CC.ajustes.listaMaleta() : BASE;
+  const maletaDe = id => db.all('maletas').find(m => m.eventoId === id);
 
-  // Vuelve a dibujar la pantalla sin perder el lugar donde estabas.
-  const refrescar = () => {
-    const y = window.scrollY, contenedor = document.querySelector('.page-content'), yc = contenedor ? contenedor.scrollTop : 0;
-    CC.router.show();
-    window.scrollTo(0, y);
-    if (contenedor) contenedor.scrollTop = yc;
-  };
+  CC.maletaUI = {
+    BASE,
 
-  const actualizarLista = (maleta, lista) => db.update('maletas', maleta.id, {lista});
+    // La maleta de un bazar; si no existe se crea con la lista predeterminada.
+    asegurar(id) {
+      return maletaDe(id) || db.add('maletas', {eventoId: id, items: [], lista: base().map(t => ({t, ok: false})), cerrada: false});
+    },
 
-  // Crea la lista de un bazar que todavía no tiene.
-  function preparar() {
-    const libres = db.all('eventos').filter(e => !db.all('maletas').some(m => m.eventoId === e.id));
-    if (!libres.length) return ui.toast(db.all('eventos').length ? 'Todos tus bazares ya tienen su lista' : 'Primero crea un bazar en Negocio → Bazares');
-    ui.modal('Preparar lista de maleta', `
-      <label>Bazar<select class="inp" name="ev">${libres.map(e => `<option value="${e.id}">${E(e.nombre)}</option>`).join('')}</select></label>
-      <label>Empezar con<select class="inp" name="inicio"><option value="base">Lo básico (${E(BASE.join(', '))})</option><option value="vacia">Una lista vacía</option></select></label>`, m => {
-      const o = ui.vals(m);
-      db.add('maletas', {eventoId: o.ev, items: [], lista: o.inicio === 'base' ? BASE.map(t => ({t, ok: false})) : [], cerrada: false});
-      refrescar();
-    });
-  }
-
-  CC.router.register('maleta', 'Maleta', '🧳', el => {
-    const maletas = db.all('maletas').filter(m => bazarVigente(m.eventoId)).slice().reverse();
-    el.innerHTML = `
-      <div class="bar">
-        <button class="btn" id="n">+ Preparar lista</button>
-        <span class="mute">Anota lo que llevas a cada bazar y márcalo al empacar. Los pines y stickers se asignan dentro del bazar.</span>
-      </div>` + (maletas.map(m => {
-        const bazar = bazarVigente(m.eventoId), lista = m.lista || [], listos = lista.filter(x => x.ok).length;
-        return `
+    // Tarjeta de la maleta para el detalle del bazar.
+    html(bazarId) {
+      const maleta = maletaDe(bazarId);
+      if (!maleta) return `
+        <div class="card"><div class="bar" style="margin:0"><div style="flex:1"><h3 style="margin:0">🧳 Lista de maleta</h3>
+          <span class="mute">Este bazar todavía no tiene lista.</span></div>
+          <button class="btn sm" data-a="mcrear">Preparar con mi lista básica</button></div></div>`;
+      const lista = maleta.lista || [], listos = lista.filter(x => x.ok).length, completa = lista.length && listos === lista.length;
+      return `
         <div class="card">
-          <div class="bar">
-            <div style="flex:1"><h3 style="margin:0">🧳 ${E(bazar.nombre)}</h3>
-              <span class="mute">${E(bazar.fecha || '')}${m.cerrada ? ' · 🔒 mercancía cerrada' : ''}</span></div>
-            <span class="chip" style="--c:${listos === lista.length && lista.length ? 'var(--color-success)' : 'var(--amarillo-300)'}">${listos}/${lista.length} listo</span>
-            <button class="btn ghost sm" data-a="reset" data-m="${m.id}">↺ Desmarcar todo</button>
-          </div>
+          <div class="bar"><div style="flex:1"><h3 style="margin:0">🧳 Lista de maleta</h3>
+            <span class="mute">Márcalo al empacar. La lista básica se cambia en Ajustes → General.</span></div>
+            <span class="chip" style="--c:${completa ? 'var(--color-success)' : 'var(--amarillo-300)'}">${listos}/${lista.length} listo</span>
+            <button class="btn ghost sm" data-a="mreset">↺ Desmarcar todo</button></div>
           ${lista.map((x, i) => `
             <div class="line" style="gap:8px">
-              <button class="btn ${x.ok ? '' : 'ghost'} sm" data-a="check" data-m="${m.id}" data-i="${i}">${x.ok ? '✅' : '⬜'}</button>
+              <button class="btn ${x.ok ? '' : 'ghost'} sm" data-a="mcheck" data-i="${i}" aria-label="Marcar">${x.ok ? '✅' : '⬜'}</button>
               <span style="flex:1;${x.ok ? 'text-decoration:line-through;opacity:.6' : ''}">${E(x.t)}</span>
-              <button class="btn ghost sm" data-a="quitar" data-m="${m.id}" data-i="${i}" title="Quitar">✕</button>
+              <button class="btn ghost sm" data-a="mquitar" data-i="${i}" title="Quitar">✕</button>
             </div>`).join('') || '<p class="mute">La lista está vacía.</p>'}
           <div class="bar" style="margin-top:8px">
-            <input class="inp nuevo-item" data-m="${m.id}" placeholder="Ej. extensión eléctrica, lonas, plumones…" style="flex:1">
-            <button class="btn sm" data-a="agregar" data-m="${m.id}">＋ Agregar</button>
+            <input class="inp nuevo-item" placeholder="Ej. extensión eléctrica, lonas, plumones…" style="flex:1">
+            <button class="btn sm" data-a="magregar">＋ Agregar</button>
           </div>
         </div>`;
-      }).join('') || '<p class="mute">Aún no hay listas. Prepara la primera con «+ Preparar lista».</p>');
+    },
 
-    const agregar = id => {
-      const maleta = db.get('maletas', id), campo = el.querySelector(`.nuevo-item[data-m="${id}"]`), texto = campo.value.trim();
+    // Botón de la tarjeta (b es el botón). Devuelve true si lo atendió.
+    click(b, bazarId, refrescar) {
+      const a = b.dataset.a;
+      if (a === 'mcrear') { this.asegurar(bazarId); refrescar(); return true; }
+      const maleta = maletaDe(bazarId);
+      if (!maleta) return false;
+      const lista = maleta.lista || [], i = +b.dataset.i, guardar = nueva => { db.update('maletas', maleta.id, {lista: nueva}); refrescar(); };
+      if (a === 'mcheck') guardar(lista.map((x, k) => k === i ? {...x, ok: !x.ok} : x));
+      else if (a === 'mquitar') guardar(lista.filter((_, k) => k !== i));
+      else if (a === 'mreset') guardar(lista.map(x => ({...x, ok: false})));
+      else if (a === 'magregar') this.agregar(bazarId, refrescar);
+      else return false;
+      return true;
+    },
+
+    agregar(bazarId, refrescar) {
+      const maleta = maletaDe(bazarId), campo = document.querySelector('.nuevo-item');
+      if (!maleta || !campo) return;
+      const texto = campo.value.trim(), lista = maleta.lista || [];
       if (!texto) return;
-      const lista = maleta.lista || [];
       if (lista.some(x => norm(x.t) === norm(texto))) return ui.toast('Eso ya está en la lista');
-      actualizarLista(maleta, [...lista, {t: texto, ok: false}]);
+      db.update('maletas', maleta.id, {lista: [...lista, {t: texto, ok: false}]});
       refrescar();
-    };
+    },
 
-    el.querySelector('#n').onclick = preparar;
-    el.onkeydown = e => {
-      if (e.key === 'Enter' && e.target.classList.contains('nuevo-item')) { e.preventDefault(); agregar(e.target.dataset.m); }
-    };
-    el.onclick = e => {
-      const b = e.target.closest('button');
-      if (!b || !b.dataset.a) return;
-      const maleta = db.get('maletas', b.dataset.m), lista = maleta ? (maleta.lista || []) : [], i = +b.dataset.i;
-      if (b.dataset.a === 'agregar') return agregar(b.dataset.m);
-      if (b.dataset.a === 'check') actualizarLista(maleta, lista.map((x, k) => k === i ? {...x, ok: !x.ok} : x));
-      else if (b.dataset.a === 'quitar') actualizarLista(maleta, lista.filter((_, k) => k !== i));
-      else if (b.dataset.a === 'reset') actualizarLista(maleta, lista.map(x => ({...x, ok: false})));
-      refrescar();
-    };
-  });
+    // Enter en el campo de la lista agrega el elemento.
+    key(e, bazarId, refrescar) {
+      if (e.key === 'Enter' && e.target.classList && e.target.classList.contains('nuevo-item')) {
+        e.preventDefault();
+        this.agregar(bazarId, refrescar);
+        return true;
+      }
+      return false;
+    }
+  };
 
+  // ---------------------------------------------------------------------------------------------
+  // Conteo físico (Inventario)
+  // ---------------------------------------------------------------------------------------------
   CC.router.register('conteo', 'Conteo físico', '🧮', el => {
     const vs = db.all('variantes');
     el.innerHTML = `<div class="bar"><span class="mute">Cuenta lo que hay en físico y escribe el número. Lo que dejes en blanco no se toca.</span><div style="flex:1"></div><button class="btn" id="ap">Aplicar ajustes</button></div>

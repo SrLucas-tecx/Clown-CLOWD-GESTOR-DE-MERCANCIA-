@@ -9,39 +9,40 @@
   <link rel="icon" type="image/svg+xml" href="img/logo-payaso.svg">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-  <!-- Estilos (responsive.css va al final para poder sobrescribir) -->
+  <!-- Estilos (el orden importa: responsive.css y ventas.css van al final para poder sobrescribir) -->
   <link rel="stylesheet" href="css/styles.css">
   <link rel="stylesheet" href="css/componentes.css">
+  <link rel="stylesheet" href="css/navegacion.css">
   <link rel="stylesheet" href="css/responsive.css">
   <link rel="stylesheet" href="css/ventas.css">
 </head>
 
 <body>
   <div class="app-layout">
-    <aside class="sidebar" id="side">
-      <div class="sidebar-logo">
-        <img class="logo-img" src="img/logo-payaso.svg" alt="Clown Cloud">
-        <span class="logo-word">CLOWN CLOUD</span>
+
+    <!-- Barra superior: marca, secciones y accesos rápidos; debajo, las pestañas de la sección -->
+    <header class="topbar" id="topbar">
+      <div class="topbar-row">
+        <div class="brand">
+          <img class="logo-img" src="img/logo-payaso.svg" alt="">
+          <span class="logo-word">CLOWN CLOUD</span>
+        </div>
+
+        <nav class="main-nav" id="nav" aria-label="Secciones"></nav>
+
+        <div class="topbar-actions">
+          <button class="btn ghost" id="mb" title="Modo bazar"><span aria-hidden="true">🛍️</span><span class="txt">Modo bazar</span></button>
+          <button class="btn ghost" id="cq" title="Registrar consulta"><span aria-hidden="true">❓</span><span class="txt">Consulta</span></button>
+          <button class="btn" id="cta" title="Venta rápida"><span aria-hidden="true">⚡</span><span class="txt">Venta rápida</span></button>
+        </div>
       </div>
-      <nav class="sidebar-nav" id="nav"></nav>
-    </aside>
 
-    <div class="sidebar-overlay" id="ov"></div>
+      <nav class="subnav" id="subnav" aria-label="Pestañas de la sección"></nav>
+    </header>
 
-    <div class="main-area">
-      <header class="header">
-        <button class="btn-icon" id="menu" title="Menú" aria-label="Abrir menú">☰</button>
-        <h1 class="header-title" id="title"></h1>
-        <button class="btn ghost" id="mb">🛍️ Modo bazar</button>
-        <button class="btn ghost" id="cq">❓ Consulta</button>
-        <button class="btn" id="cta">⚡ Venta rápida</button>
-      </header>
-
-      <div class="page-content">
-        <div class="subnav" id="subnav"></div>
-        <div id="view"></div>
-      </div>
-    </div>
+    <main class="page-content">
+      <div id="view"></div>
+    </main>
   </div>
 
   <div id="modal" class="modal-overlay"></div>
@@ -63,7 +64,7 @@
   <script src="js/core/semilla.js"></script>
   <script src="js/core/grupos.js"></script>
 
-  <!-- Módulos: el orden define las pestañas -->
+  <!-- Módulos -->
   <script src="js/modules/inicio.js"></script>
   <script src="js/modules/ventas.js"></script>
   <script src="js/modules/historial.js"></script>
@@ -87,6 +88,7 @@
   <script src="js/modules/rentabilidad.js"></script>
   <script src="js/modules/costos.js"></script>
   <script src="js/modules/respaldo.js"></script>
+  <script src="js/modules/ajustes.js"></script>
   <script src="js/modules/colores.js"></script>
   <script src="js/modules/tipos.js"></script>
   <script src="js/modules/comparativa.js"></script>

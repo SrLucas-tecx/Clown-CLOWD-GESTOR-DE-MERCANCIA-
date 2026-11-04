@@ -1,0 +1,155 @@
+/* ==========================================================================
+   CLOWN CLOUD · navegacion.css
+   Barra superior fija: marca + secciones (horizontal) + accesos rápidos,
+   y debajo las pestañas de la sección. En celular la barra de secciones
+   baja a su propia fila y se desliza con el dedo.
+   ========================================================================== */
+
+:root { --topbar-h: 104px; } /* se recalcula en js/app.js con la altura real */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--azul-950);
+  border-bottom: 1px solid var(--line);
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* ---------- Fila principal ---------- */
+.topbar-row {
+  display: flex;
+  align-items: stretch;
+  gap: 18px;
+  min-height: 60px;
+  padding: 0 24px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+.brand .logo-img { width: 40px; height: auto; }
+.logo-word { font-family: var(--font-display); font-weight: 800; letter-spacing: .02em; white-space: nowrap; }
+
+/* ---------- Secciones (horizontal) ---------- */
+.main-nav {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.main-nav::-webkit-scrollbar { display: none; }
+
+.nav-item {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: none;
+  color: var(--mute);
+  font: 700 .92rem var(--font-body);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color .15s, background .15s;
+}
+.nav-item:hover { color: var(--ink); background: color-mix(in srgb, var(--azul-600) 28%, transparent); }
+.nav-item.active { color: var(--ink); border-bottom-color: var(--rojo); background: var(--rojo-soft); }
+.nav-ico { font-size: 1.15rem; line-height: 1; }
+
+/* ---------- Accesos rápidos ---------- */
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+.topbar-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+}
+
+/* ---------- Pestañas de la sección ---------- */
+.subnav {
+  display: flex;
+  gap: 4px;
+  padding: 0 24px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  background: var(--azul-900);
+  border-top: 1px solid var(--line);
+}
+.subnav::-webkit-scrollbar { display: none; }
+
+.subnav-tab {
+  flex: 0 0 auto;
+  padding: 11px 14px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--mute);
+  font: 700 .85rem var(--font-body);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.subnav-tab:hover { color: var(--amarillo-300); }
+.subnav-tab.active { color: var(--ink); border-bottom-color: var(--rojo); }
+
+/* ---------- Foco visible con teclado ---------- */
+.nav-item:focus-visible,
+.subnav-tab:focus-visible,
+.topbar-actions .btn:focus-visible {
+  outline: 2px solid var(--amarillo);
+  outline-offset: -2px;
+}
+
+/* ---------- Tableta (≤ 900 px): la barra de secciones baja a su propia fila ---------- */
+@media (max-width: 900px) {
+  .topbar-row {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 10px;
+    padding: 0 12px;
+    min-height: 0;
+  }
+  .brand { min-height: 52px; }
+  .topbar-actions { margin-left: auto; }
+  .main-nav {
+    order: 3;
+    flex: 1 0 100%;
+    margin: 0 -12px;
+    padding: 0 6px;
+    min-height: 46px;
+    border-top: 1px solid var(--line);
+  }
+  .nav-item { padding: 0 14px; }
+  .subnav { padding: 0 6px; }
+}
+
+/* ---------- Celular (≤ 600 px): accesos rápidos solo con ícono ---------- */
+@media (max-width: 600px) {
+  .logo-word { font-size: .9rem; }
+  .topbar-actions { gap: 6px; }
+  .topbar-actions .btn { padding: 0 12px; }
+  .topbar-actions .txt { display: none; }
+  .topbar-actions #cta .txt { display: inline; } /* «Venta rápida» siempre con texto */
+  .nav-item { padding: 0 12px; font-size: .85rem; }
+  .nav-ico { font-size: 1.05rem; }
+}
+
+@media (max-width: 380px) {
+  .logo-word { display: none; }
+  .topbar-actions #cta .txt { display: none; }
+}

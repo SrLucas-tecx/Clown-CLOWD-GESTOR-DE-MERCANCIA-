@@ -1,12 +1,11 @@
-// Bazares: lista «Mis bazares» y vista de detalle de cada uno.
-// El detalle reúne: resultados, mercancía llevada (agrupada por tema), costos y pagos,
-// ingresos extra y ventas por fecha. Todo se agrega, suma, resta y quita en la misma pantalla.
+// Bazares: tarjetas «Mis bazares» y vista de detalle de cada uno.
+// El detalle reúne: resultados, costos y pagos, maleta, mercancía llevada (agrupada por tema),
+// juegos e ingresos extra y ventas por fecha. Todo se agrega, suma, resta y quita en la misma pantalla.
 (() => {
   const {db, ui} = CC;
   const E = ui.esc, $ = ui.money;
   const norm = s => String(s || '').trim().toLowerCase();
   const SIN_TEMA = '__sin__';
-  const CHECKLIST = ['Mesa', 'Fondo de caja', 'Bolsas', 'Terminal', 'Cartelitos'];
   let abierto = null; // id del bazar que se está viendo en detalle (null = lista)
 
   // ---------------------------------------------------------------------------------------------
@@ -92,7 +91,7 @@
           .map(r => ({concepto: r.querySelector('.cc').value.trim() || 'Otro', monto: +r.querySelector('.cm').value || 0}))
           .filter(c => c.monto > 0);
         const datos = {nombre: o.nombre.trim(), lugar: o.lugar.trim(), fecha: o.fecha, dias: +o.dias || 0, mesa: +o.mesa || 0, pagado: +o.pagado || 0, fondoCaja: (e.cambioDesglose && Object.keys(e.cambioDesglose).length) ? (+e.fondoCaja || 0) : (+o.fondoCaja || 0), costos};
-        if (nuevo) abierto = db.add('eventos', {...datos, ingresos: []}).id;
+        if (nuevo) { abierto = db.add('eventos', {...datos, ingresos: []}).id; asegurarMaleta(abierto); }
         else {
           db.update('eventos', e.id, datos);
           // Los gastos sueltos de versiones anteriores ya quedaron dentro de la lista de costos.
@@ -125,6 +124,26 @@
       refrescar();
     });
 
+  // Agrega un costo (gasolina, comida, bolsas…) directo desde el detalle del bazar.
+  function agregarCosto(e) {
+    ui.modal('Agregar costo · ' + E(e.nombre),
+      ui.inp('concepto', 'Concepto', '', 'text', 'placeholder="Ej. gasolina, comida, bolsas"') + ui.inp('monto', 'Monto', '', 'number', 'step="0.01" min="0"'), m => {
+        const o = ui.vals(m), monto = +o.monto;
+        if (!(monto > 0)) { ui.toast('Pon el monto del costo'); return false; }
+        db.update('eventos', e.id, {costos: [...(e.costos || []), {concepto: o.concepto.trim() || 'Otro', monto}]});
+        refrescar();
+      });
+  }
+
+  // Quita un costo (con «Deshacer»). El de la mesa se cambia en «Editar».
+  function quitarCosto(e, origen, clave) {
+    const copia = JSON.stringify(db.crudo());
+    if (origen === 'gasto') db.remove('gastos', clave);
+    else db.update('eventos', e.id, {costos: (e.costos || []).filter((_, i) => i !== +clave)});
+    refrescar();
+    ui.deshacer('Costo quitado.', copia);
+  }
+
   // Quita un ingreso de la lista (con «Deshacer»).
   function quitarIngreso(e, indice) {
     const copia = JSON.stringify(db.crudo());
@@ -151,7 +170,7 @@
   // ---------------------------------------------------------------------------------------------
   // Mercancía: asignar temas, sumar y restar lo que se lleva
   // ---------------------------------------------------------------------------------------------
-  const asegurarMaleta = id => maletaDe(id) || db.add('maletas', {eventoId: id, items: [], lista: CHECKLIST.map(t => ({t, ok: false})), cerrada: false});
+  const asegurarMaleta = id => CC.maletaUI.asegurar(id);
   const cerrada = id => { const m = maletaDe(id); return !!(m && m.cerrada); };
   const ESTA_CERRADA = 'La maleta de este bazar ya está cerrada';
 
@@ -285,29 +304,44 @@
   const kpi = (titulo, valor, detalle = '', clase = '') => `<div class="kpi"><small>${titulo}</small><b class="${clase}">${valor}</b>${detalle ? `<span class="mute">${detalle}</span>` : ''}</div>`;
   const subtitulo = e => [e.lugar, e.fecha, e.dias ? e.dias + (e.dias === 1 ? ' día' : ' días') : ''].filter(Boolean).map(E).join(' · ');
 
+  // Etiqueta de tiempo del bazar: próximo, en curso o terminado.
+  const estadoDe = b => {
+    if (!b.fecha) return null;
+    const hoy = ui.hoy(), f = new Date(b.fecha + 'T00:00:00');
+    f.setDate(f.getDate() + Math.max(1, +b.dias || 1) - 1);
+    const ultimo = f.toLocaleDateString('sv');
+    return hoy < b.fecha ? ['Próximo', 'var(--amarillo-300)'] : hoy <= ultimo ? ['En curso', 'var(--color-success)'] : ['Terminado', 'var(--azul-300)'];
+  };
+
   function listaBazares(el) {
-    const bazares = db.all('eventos').slice().reverse();
+    const bazares = db.all('eventos').slice().sort((a, b) => String(b.fecha || '').localeCompare(String(a.fecha || '')) || String(b.creado).localeCompare(String(a.creado)));
+    const tarjeta = b => {
+      const c = calc(b), estado = estadoDe(b), maleta = maletaDe(b.id), lista = maleta ? (maleta.lista || []) : [], listos = lista.filter(x => x.ok).length;
+      return `
+        <div class="pcard" data-a="ver" data-id="${b.id}" style="cursor:pointer"><div class="pb">
+          <div class="bar" style="margin:0 0 2px;align-items:flex-start">
+            <b style="flex:1;font-size:1.1rem">🎪 ${E(b.nombre)}</b>
+            ${estado ? `<span class="chip" style="--c:${estado[1]}">${estado[0]}</span>` : ''}
+          </div>
+          <div class="mute">${subtitulo(b) || 'Sin fecha ni lugar'}</div>
+          <div class="line"><span>Vendido</span><b>${$(c.venta)}</b></div>
+          <div class="line"><span>Ganancia real</span><b class="${c.neto < 0 ? 'neg' : 'pos-n'}">${$(c.neto)}</b></div>
+          <div class="line"><span>Por pagar del bazar</span><b class="${c.pend ? 'neg' : ''}">${$(c.pend)}</b></div>
+          <div class="line"><span>🧳 Maleta</span><span>${lista.length ? `${listos}/${lista.length} listo` : 'sin lista'}${maleta && maleta.cerrada ? ' · 🔒' : ''}</span></div>
+          <div class="bar" style="margin:10px 0 0">
+            <button class="btn sm" data-a="ver" data-id="${b.id}">Abrir</button>
+            <button class="btn ghost sm" data-a="editar" data-id="${b.id}">Editar</button>
+            <button class="btn ghost sm" data-a="borrar" data-id="${b.id}">Eliminar</button>
+          </div>
+        </div></div>`;
+    };
     el.innerHTML = `
       <div class="bar">
         <div style="flex:1;min-width:240px"><h3 style="margin:0">Mis bazares</h3>
-          <p class="mute" style="margin:2px 0 0">Entra a un bazar para ver su mercancía, costos, ingresos y ganancia.</p></div>
+          <p class="mute" style="margin:2px 0 0">Toca un bazar para ver su maleta, mercancía, costos, juegos y ganancia.</p></div>
         <button class="btn" id="nuevo">+ Nuevo bazar</button>
       </div>
-      <div class="card">
-        <table>
-          <thead><tr><th>Bazar</th><th>Ventas</th><th>Total vendido</th><th>Ganancia real</th><th>Acciones</th></tr></thead>
-          <tbody>${bazares.map(b => {
-            const c = calc(b);
-            return `<tr>
-              <td><b>🎪 ${E(b.nombre)}</b><div class="mute">${subtitulo(b)}</div><div class="mute">Costo real: ${$(c.gas)} · Pendiente: ${$(c.pend)}</div></td>
-              <td>${c.n}</td><td>${$(c.venta)}</td>
-              <td class="${c.neto < 0 ? 'neg' : 'pos-n'}"><b>${$(c.neto)}</b></td>
-              <td class="end"><button class="btn sm" data-a="ver" data-id="${b.id}">Ir al bazar</button>
-                <button class="btn ghost sm" data-a="editar" data-id="${b.id}">Editar</button>
-                <button class="btn ghost sm" data-a="borrar" data-id="${b.id}">Eliminar</button></td></tr>`;
-          }).join('') || '<tr><td colspan="5" class="mute">Registra tu primer bazar para ver su rendimiento.</td></tr>'}</tbody>
-        </table>
-      </div>`;
+      <div class="cards" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr))">${bazares.map(tarjeta).join('') || '<p class="mute">Registra tu primer bazar con «+ Nuevo bazar» para ver su rendimiento.</p>'}</div>`;
   }
 
   function detalleBazar(el, e) {
@@ -350,12 +384,26 @@
         ${kpi('Total vendido', $(c.venta), c.n + ' venta(s)')}
         ${kpi('Ganancia si vendes todo', $(c.estimada), 'ganancia real + lo que falta por vender')}
         ${kpi('❓ Consultas ligadas', c.consultas, 'preguntas hechas en este bazar')}
-        ${kpi('Costo real del bazar', $(c.gas), `Pagado ${$(+e.pagado || 0)} · Saldo ${$(c.pend)} · se edita en ✏️ Editar`)}
+        ${kpi('Costo real del bazar', $(c.gas), `Pagado ${$(+e.pagado || 0)} · Saldo ${$(c.pend)} · detalle en «Costos del bazar»`)}
         ${kpi('🎲 Juegos e ingresos extra', $(c.extra), 'lo contado en juegos, rifas y propinas', 'pos-n')}
         ${kpi('💰 Ganancia real', $(c.neto), 'ventas − costo de producto + extra − costos', c.neto < 0 ? 'neg' : 'pos-n')}
       </div>
       <div class="meter"><i style="width:${c.pct}%"></i></div>
       <div class="mute" style="margin-bottom:12px">${c.pct >= 100 ? 'Costos cubiertos' : 'Equilibrio: ' + c.pct + '% de los costos cubiertos'}</div>
+
+      <div class="card">
+        <div class="bar"><div style="flex:1"><h3 style="margin:0">💸 Costos del bazar</h3>
+          <span class="mute">Mesa, gasolina, comida… todo lo que cuesta ir.</span></div>
+          <button class="btn sm" data-a="costoAdd">＋ Agregar costo</button></div>
+        ${c.costos.map(x => `
+          <div class="line"><span>${E(x.concepto)}</span>
+            <span><b>${$(x.monto)}</b> ${x.fijo ? '<span class="mute">(se cambia en ✏️ Editar)</span>' : `<button class="btn ghost sm" data-a="costoQuitar" data-o="${x.origen}" data-k="${x.origen === 'gasto' ? x.id : x.i}">✕</button>`}</span></div>`).join('') || '<p class="mute">Aún no registras costos de este bazar.</p>'}
+        <div class="line"><b>Costo total</b><b>${$(c.gas)}</b></div>
+        <div class="line"><span>Ya pagado</span><span>${$(+e.pagado || 0)}</span></div>
+        <div class="line"><b>Saldo por pagar</b><b class="${c.pend ? 'neg' : 'pos-n'}">${$(c.pend)}</b></div>
+      </div>
+
+      ${CC.maletaUI.html(e.id)}
 
       <div class="bar" style="margin-top:8px"><h3 style="margin:0;flex:1">🧳 Mercancía que llevas</h3>
         ${bloqueada ? '' : '<button class="btn" data-a="mercancia" data-tema="">＋ Agregar tema</button>'}</div>
@@ -390,7 +438,7 @@
     e ? detalleBazar(el, e) : listaBazares(el);
 
     el.onclick = ev => {
-      const b = ev.target.closest('button');
+      const b = ev.target.closest('button,[data-a]');
       if (!b) return;
       const d = b.dataset, actual = abierto ? db.get('eventos', abierto) : null, delBoton = d.id ? db.get('eventos', d.id) : null;
       switch (d.a) {
@@ -401,6 +449,9 @@
         case 'borrar': return eliminar(delBoton);
         case 'caja': CC.cajaSel = actual.id; location.hash = 'caja'; return;
         case 'pago': return registrarPago(actual);
+        case 'costoAdd': return agregarCosto(actual);
+        case 'costoQuitar': return quitarCosto(actual, d.o, d.k);
+        case 'mcrear': case 'mcheck': case 'mquitar': case 'mreset': case 'magregar': return CC.maletaUI.click(b, actual.id, refrescar);
         case 'cerrar': return cerrarMercancia(actual);
         case 'juegos': return CC.agregarJuego(actual.id);
         case 'quitarI': return quitarIngreso(actual, d.i);
@@ -410,6 +461,7 @@
         case 'quitarM': return quitarMercancia(actual, d.v);
       }
     };
+    el.onkeydown = ev => CC.maletaUI.key(ev, abierto, refrescar);
     const nuevo = el.querySelector('#nuevo');
     if (nuevo) nuevo.onclick = () => form();
   });
