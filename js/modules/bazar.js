@@ -85,6 +85,7 @@
     el('mbp').onclick = e => { const b = e.target.closest('[data-tema]'); if (b) { mb.tema = b.dataset.tema; pintar(); } };
     el('mbg').onclick = e => {
       if (mb.vista !== 'vender') return panelClick(e);
+      if (e.target.closest('[data-empty-reset]')) { mb.tema = 'todos'; el('mbq').value = ''; pintar(); return; }
       const boton = e.target.closest('button[data-a]');
       if (boton) return agregar(boton.dataset.k, boton.dataset.a === 'mas' ? 1 : -1);
       const t = e.target.closest('.vt-tile');
@@ -207,6 +208,7 @@
 
       const visibles = gr.filter(g => (mb.tema === 'todos' || g.tema === mb.tema) && G.buscar(g, texto));
       const combosVisibles = combos.filter(p => (mb.tema === 'todos' || mb.tema === TEMA_COMBOS) && (!texto || p.nombre.toLowerCase().includes(texto.toLowerCase())));
+      const sinCoincidencias = Boolean(texto) || mb.tema !== 'todos';
       el('mbg').innerHTML =
         temas.filter(t => visibles.some(g => g.tema === t)).map(t => {
           const delTema = visibles.filter(g => g.tema === t);
@@ -215,7 +217,12 @@
             <div class="vt-grid">${delTema.filter(g => g.seccion === sec).sort((a, b) => a.etiqueta.localeCompare(b.etiqueta, 'es')).map(g => tile(todos.find(p => p.k === g.clave))).join('')}</div>`).join('')}</section>`;
         }).join('') +
         (combosVisibles.length ? `<section class="vt-tema"><h3>${TEMA_COMBOS}</h3><div class="vt-grid">${combosVisibles.map(tile).join('')}</div></section>` : '') ||
-        '<p class="mute">Nada con stock coincide.</p>';
+        `<div class="empty-state">
+          <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+          <h4>${sinCoincidencias ? 'No encontramos productos' : 'No hay productos disponibles'}</h4>
+          <p>${sinCoincidencias ? 'Prueba con otro término o quita el filtro seleccionado.' : 'Cuando haya productos con existencias aparecerán aquí.'}</p>
+          ${sinCoincidencias ? '<button class="btn ghost sm" type="button" data-empty-reset>Ver todo el catálogo</button>' : ''}
+        </div>`;
     }
 
     // Ticket (columna derecha)
@@ -229,6 +236,7 @@
     }).join('') || '<p class="mute">Toca un tipo para agregarlo a la venta.</p>';
     el('mbt').textContent = $(total);
     el('mbc').disabled = !Object.keys(mb.t).length;
+    el('mbc').classList.toggle('listo', total > 0);
     el('mbpay').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.p === mb.pago));
     el('mbhv').textContent = $(ventasHoy().reduce((s, v) => s + v.total, 0));
     pintarCambio();
@@ -292,8 +300,8 @@
         <h3 style="margin:0 0 2px">Anotar lo contado · ${E(bazar.nombre)}</h3>
         <p class="mute" style="margin:0 0 8px">Se guarda con la fecha de hoy. Deja vacíos los juegos que no usaste. Los juegos que lleva el bazar se eligen en Bazares → Juegos.</p>
         ${juegos.map(j => `
-          <div class="line" style="gap:8px;flex-wrap:wrap"><span style="flex:1;min-width:140px">${E(j.icono)} ${E(j.nombre)}${j.nota ? `<div class="mute">${E(j.nota)}</div>` : ''}</span>
-            <input class="inp mbj-m" data-j="${j.id}" type="number" min="0" step="0.01" inputmode="decimal" placeholder="$ contado" style="width:120px">
+          <div class="line" style="gap:8px;flex-wrap:wrap"><span style="flex:1;min-width:140px">${E(j.icono)} ${E(j.nombre)}${j.nota ? `<div class="mute">${E(j.nota)}</div>` : ''}${+j.precioPorJugada > 0 ? `<div class="mute">Por persona/jugada: ${$(j.precioPorJugada)}</div>` : ''}</span>
+            <input class="inp mbj-m" data-j="${j.id}" data-precio="${+j.precioPorJugada || 0}" type="number" min="0" step="0.01" inputmode="decimal" placeholder="$ contado" style="width:120px">
             <input class="inp mbj-p" data-j="${j.id}" type="number" min="0" step="1" inputmode="numeric" placeholder="Personas" style="width:100px"></div>`).join('') || '<p class="mute">Aún no tienes tipos de juego: créalos en Bazares → Juegos.</p>'}
         <button class="btn vt-cobrar" data-a="guardarJuegos" type="button" style="margin-top:10px">Guardar lo contado</button>
       </div>`;
@@ -353,7 +361,12 @@
     msg.textContent = Math.abs(dif) < 0.01 ? '✅ La caja cuadra exacto.' : dif > 0 ? `Sobran ${$(dif)} respecto a lo esperado.` : `⚠️ Faltan ${$(-dif)} respecto a lo esperado.`;
   }
 
-  function panelInput(e) { if (e.target.id === 'mbfondo' || e.target.id === 'mbcont') resultadoCaja(); }
+  function panelInput(e) {
+    if (e.target.classList.contains('mbj-m')) {
+      const precio = +e.target.dataset.precio || 0;
+      if (precio > 0) el('mbg').querySelector(`.mbj-p[data-j="${e.target.dataset.j}"]`).value = Math.floor((+e.target.value || 0) / precio);
+    } else if (e.target.id === 'mbfondo' || e.target.id === 'mbcont') resultadoCaja();
+  }
   function panelCambio(e) {
     const sel = el('mbe').value;
     if (e.target.id === 'mbfondo') CC.cajaGuardar(sel, {fondoCaja: +e.target.value || 0, cambioDesglose: {}});

@@ -123,13 +123,12 @@ video { max-width: 100%; height: auto; }
   }
   .modal-footer .btn { flex: 1 1 auto; }
 
-  /* 5.5 Aviso flotante (toast) ocupa el ancho disponible */
-  #toast {
-    left: 12px;
-    right: 12px;
-    width: auto;
-    max-width: none;
-    bottom: calc(12px + env(safe-area-inset-bottom, 0));
+  /* 5.5 Notificaciones apiladas por encima de la navegación inferior */
+  #toast-container {
+    left: 16px;
+    right: 16px;
+    bottom: calc(84px + env(safe-area-inset-bottom, 0));
+    align-items: center;
   }
 
   /* Botón Cobrar del Modo bazar (sobrescribe el padding en línea) */

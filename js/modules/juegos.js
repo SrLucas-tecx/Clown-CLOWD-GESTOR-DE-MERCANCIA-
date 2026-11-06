@@ -42,11 +42,13 @@
   function formJuego(juego) {
     ui.modal(juego ? 'Editar juego' : 'Nuevo tipo de juego',
       ui.inp('nombre', 'Nombre del juego', juego ? juego.nombre : '', 'text', 'placeholder="Ej. Ruleta, Pesca de patitos"') +
-      `<div class="grid2">${ui.inp('icono', 'Ícono (un emoji)', juego ? juego.icono : '🎲', 'text', 'maxlength="2"')}${ui.inp('nota', 'Nota (opcional)', juego ? juego.nota : '', 'text', 'placeholder="Ej. $10 por jugada"')}</div>`, m => {
+      `<div class="grid2">${ui.inp('icono', 'Ícono (un emoji)', juego ? juego.icono : '🎲', 'text', 'maxlength="2"')}${ui.inp('nota', 'Nota (opcional)', juego ? juego.nota : '', 'text', 'placeholder="Ej. Incluye premio"')}</div>` +
+      ui.inp('precioPorJugada', 'Precio por persona o jugada', juego && juego.precioPorJugada || '', 'number', 'min="0" step="0.01" placeholder="$ 0.00"') +
+      '<p class="mute">Al registrar el monto, se calculará cuántas jugadas completas representa. Puedes ajustar el número de personas.</p>', m => {
         const o = ui.vals(m), nombre = o.nombre.trim();
         if (!nombre) { ui.toast('Falta el nombre'); return false; }
         if (db.all('juegos').some(j => norm(j.nombre) === norm(nombre) && (!juego || j.id !== juego.id))) { ui.toast('Ya existe un juego con ese nombre'); return false; }
-        const datos = {nombre, icono: o.icono.trim() || '🎲', nota: o.nota.trim()};
+        const datos = {nombre, icono: o.icono.trim() || '🎲', nota: o.nota.trim(), precioPorJugada: Math.max(0, +o.precioPorJugada || 0)};
         if (juego) db.update('juegos', juego.id, datos); else db.add('juegos', datos);
         refrescar();
       });
@@ -99,12 +101,16 @@
       raiz.querySelectorAll('.jg-m').forEach(i => { guardados[i.dataset.j] = [i.value, (raiz.querySelector(`.jg-p[data-j="${i.dataset.j}"]`) || {}).value || '']; });
       const destino = bazarId || (q('[name=bazar]') ? q('[name=bazar]').value : inicial);
       q('#jg-lista').innerHTML = CC.juegosDeBazar(destino).map(j => `
-        <div class="line" style="gap:8px;flex-wrap:wrap"><span style="flex:1;min-width:150px">${E(j.icono)} ${E(j.nombre)}${j.nota ? `<div class="mute">${E(j.nota)}</div>` : ''}</span>
-          <input class="inp jg-m" data-j="${j.id}" type="number" min="0" step="0.01" placeholder="$ contado" value="${E((guardados[j.id] || [''])[0])}" style="width:120px">
+        <div class="line" style="gap:8px;flex-wrap:wrap"><span style="flex:1;min-width:150px">${E(j.icono)} ${E(j.nombre)}${j.nota ? `<div class="mute">${E(j.nota)}</div>` : ''}${+j.precioPorJugada > 0 ? `<div class="mute">Por persona/jugada: ${$(j.precioPorJugada)}</div>` : ''}</span>
+          <input class="inp jg-m" data-j="${j.id}" data-precio="${+j.precioPorJugada || 0}" type="number" min="0" step="0.01" placeholder="$ contado" value="${E((guardados[j.id] || [''])[0])}" style="width:120px">
           <input class="inp jg-p" data-j="${j.id}" type="number" min="0" step="1" placeholder="Personas" value="${E((guardados[j.id] || ['', ''])[1])}" style="width:100px"></div>`).join('') || '<p class="mute">Aún no tienes tipos de juego: créalos en la pestaña Juegos.</p>';
       total();
     };
-    const total = () => {
+    const total = e => {
+      if (e && e.target.matches('.jg-m')) {
+        const monto = +e.target.value || 0, precio = +e.target.dataset.precio || 0;
+        if (precio > 0) q(`.jg-p[data-j="${e.target.dataset.j}"]`).value = Math.floor(monto / precio);
+      }
       const suma = [...raiz.querySelectorAll('.jg-m, [name=otroM]')].reduce((s, i) => s + (+i.value || 0), 0);
       const gente = [...raiz.querySelectorAll('.jg-p')].reduce((s, i) => s + (Math.floor(+i.value) || 0), 0);
       q('#jg-total').innerHTML = suma ? `Total contado: <b>${$(suma)}</b>${gente ? ` · <b>${gente}</b> persona(s) jugaron` : ''}` : '<span class="mute">Aún no hay montos.</span>';

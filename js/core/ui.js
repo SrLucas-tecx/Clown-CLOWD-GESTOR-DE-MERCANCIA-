@@ -11,23 +11,36 @@ CC.ui = {
     '"': '&quot;'
   }[c])),
   hoy: () => new Date().toLocaleDateString('sv'),
-  toast(msg, acc) {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.classList.toggle('act', !!acc);
+  toast(msg, acc, type = 'normal') {
+    if (typeof acc === 'string') { type = acc; acc = null; }
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    const variant = ['success', 'error'].includes(type) ? type : '';
+    const t = document.createElement('div');
+    t.className = `toast-msg${variant ? ' ' + variant : ''}${acc ? ' act' : ''}`;
+    t.setAttribute('role', variant === 'error' ? 'alert' : 'status');
+    const text = document.createElement('span');
+    text.className = 'toast-text';
+    text.textContent = msg;
+    t.appendChild(text);
+    const cerrar = () => {
+      if (t.classList.contains('out')) return;
+      t.classList.add('out');
+      setTimeout(() => t.remove(), 300);
+    };
     if (acc) {
       const b = document.createElement('button');
       b.className = 'toast-accion';
       b.textContent = acc.label;
       b.onclick = () => {
-        t.classList.remove('on');
+        clearTimeout(t._t);
+        cerrar();
         acc.fn();
       };
       t.appendChild(b);
     }
-    t.classList.add('on');
-    clearTimeout(t._t);
-    t._t = setTimeout(() => t.classList.remove('on'), acc ? 8000 : Math.max(2500, msg.length * 60));
+    container.appendChild(t);
+    t._t = setTimeout(cerrar, acc ? 8000 : Math.max(2500, String(msg).length * 60));
   },
   // Aviso con «Deshacer»: copia es el JSON de los datos tomado ANTES del cambio.
   deshacer(msg, copia) {

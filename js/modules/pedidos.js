@@ -341,8 +341,7 @@
     'Listo': 'var(--color-success, #3fd08f)',
     'Entregado': 'var(--azul-600)'
   };
-  // Semáforo de producción: rojo por hacer, amarillo en producción, verde listo, palomita entregado.
-  const SEMAFORO = {'Por hacer': '🔴', 'En producción': '🟡', 'Listo': '🟢', 'Entregado': '✅'};
+  const CLASE_ESTADO = {'Por hacer': 'por-hacer', 'En producción': 'produccion', 'Listo': 'listo', 'Entregado': 'entregado'};
 
   // Cambia el estado desde la tarjeta, siempre con confirmación. «Entregado» genera la venta (ventana propia).
   function cambiarEstado(p, nuevo) {
@@ -533,8 +532,13 @@
         ${p.anticipo ? `<div class="line"><span>Anticipo</span><span>${$(p.anticipo)}</span></div>` : ''}
         <div class="line"><span>Saldo por cobrar</span><b class="${p.estado === 'Entregado' ? 'pos-n' : saldo ? 'neg' : ''}">${$(p.estado === 'Entregado' ? 0 : saldo)}</b></div>
         <div class="line"><span>Ganancia</span><b class="pos-n">${$(ganancia(p))}</b></div>
-        <div style="display:flex;flex-wrap:wrap;gap:4px;margin:10px 0 0" title="Estado del pedido">
-          ${ESTADOS.map(est => `<button class="btn ${est === p.estado ? '' : 'ghost'} sm" data-est="${p.id}" data-to="${est}" ${p.estado === 'Entregado' && est !== p.estado ? 'disabled' : ''}>${SEMAFORO[est]} ${est}</button>`).join('')}
+        <div class="status-dropdown" data-state="${CLASE_ESTADO[p.estado]}" style="margin:10px 0 0">
+          <div class="indicator" aria-hidden="true"><span></span><span></span><span></span></div>
+          <span class="current-state" aria-hidden="true">${E(p.estado)}</span>
+          <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          <select data-est="${p.id}" data-current="${E(p.estado)}" aria-label="Cambiar estado del pedido ${E(p.folio)}" ${p.estado === 'Entregado' ? 'disabled' : ''}>
+            ${ESTADOS.map(est => `<option value="${E(est)}" ${est === p.estado ? 'selected' : ''}>${E(est)}</option>`).join('')}
+          </select>
         </div>
         <div class="bar" style="margin:8px 0 0">
           <button class="btn sm" data-v="${p.id}">👁 Ver</button>
@@ -572,15 +576,28 @@
         </select>
         <button class="btn" id="n">+ Pedido</button>
       </div>
-      <div class="cards" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr))">${lista.map(tarjeta).join('') || '<p class="mute">No hay pedidos aquí. Crea el primero con «+ Pedido».</p>'}</div>`;
+      <div class="cards" style="grid-template-columns:repeat(auto-fill,minmax(300px,1fr))">${lista.length ? lista.map(tarjeta).join('') : `<div class="empty-state">
+        <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5M12 22V12"/></svg>
+        <h4>${todos.length ? 'No hay pedidos con estos filtros' : 'No hay pedidos activos'}</h4>
+        <p>${todos.length ? 'Prueba con otro estado o cliente, o registra un nuevo pedido.' : 'Cuando registres nuevas ventas o cotizaciones, aparecerán aquí.'}</p>
+        <button class="btn ghost sm" type="button" data-new-pedido>+ Nuevo pedido</button>
+      </div>`}</div>`;
 
-    el.querySelector('#n').onclick = () => { wiz = nuevoWiz(); CC.router.show(); };
+    const nuevoPedido = () => { wiz = nuevoWiz(); CC.router.show(); };
+    el.querySelector('#n').onclick = nuevoPedido;
     el.querySelector('#fc').onchange = e => { filtroCliente = e.target.value; CC.router.show(); };
+    el.onchange = e => {
+      const select = e.target.closest('select[data-est]');
+      if (!select) return;
+      const nuevo = select.value;
+      select.value = select.dataset.current;
+      cambiarEstado(db.get('pedidos', select.dataset.est), nuevo);
+    };
     el.onclick = e => {
       const b = e.target.closest('button');
       if (!b) return;
       const g = clave => db.get('pedidos', b.dataset[clave]);
-      if (b.dataset.est) cambiarEstado(g('est'), b.dataset.to);
+      if (b.dataset.newPedido !== undefined) nuevoPedido();
       else if (b.dataset.s) { fe = b.dataset.s; CC.router.show(); }
       else if (b.dataset.v) ver(g('v'));
       else if (b.dataset.a) avanzar(g('a'));
