@@ -130,6 +130,17 @@
     ['Rojo oscuro', '--rojo-600']
   ];
 
+  // Tonos predeterminados: ya validados con las reglas de arriba, así no hay combinaciones que se vean mal.
+  const TONOS_LISTOS = [
+    ['Payaso clásico', {azul: '#1a2f61', amarillo: '#ffc933', rojo: '#e3363d'}],
+    ['Medianoche', {azul: '#0f1b3d', amarillo: '#ffd24a', rojo: '#ff4d5a'}],
+    ['Océano', {azul: '#0d3b66', amarillo: '#ffb703', rojo: '#e63946'}],
+    ['Bosque', {azul: '#123524', amarillo: '#f4d35e', rojo: '#e4572e'}],
+    ['Violeta', {azul: '#2a1b5e', amarillo: '#ffc933', rojo: '#ef476f'}],
+    ['Grafito', {azul: '#1f2937', amarillo: '#ffcc33', rojo: '#ef4444'}]
+  ];
+  const mismos = (a, b) => ['azul', 'amarillo', 'rojo'].every(k => String(a[k]).toLowerCase() === String(b[k]).toLowerCase());
+
   CC.router.register('apariencia', 'Apariencia', '🎨', el => {
     const colores = leer();
 
@@ -140,7 +151,19 @@
           style="width:100%;height:38px;margin-top:4px;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:3px">
       </label>`;
 
-    el.innerHTML = `
+    const presets = `
+      <div class="card">
+        <h3 style="margin:0 0 4px">Tonos predeterminados</h3>
+        <p class="mute" style="margin:0 0 10px">Combinaciones listas que ya se ven bien. Toca una para aplicarla; abajo puedes ajustar cada color a tu gusto.</p>
+        <div class="cards" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px">
+          ${TONOS_LISTOS.map(([nombre, c], i) => `
+            <button type="button" class="btn ghost" data-preset="${i}" style="display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:12px;${mismos(c, colores) ? 'border-color:var(--amarillo);background:var(--amarillo-soft)' : ''}">
+              <span style="display:flex;gap:4px">${['azul', 'amarillo', 'rojo'].map(k => `<i style="width:26px;height:26px;border-radius:50%;background:${c[k]};border:1px solid #fff3"></i>`).join('')}</span>
+              <b>${nombre}${mismos(c, colores) ? ' ✓' : ''}</b>
+            </button>`).join('')}
+        </div>
+      </div>`;
+    el.innerHTML = presets + `
       <div class="grid2" style="align-items:start">
       <div class="card">
         <h3 style="margin:0 0 4px">Colores de la interfaz</h3>
@@ -164,6 +187,13 @@
       </div>
       </div>`;
 
+    el.onclick = e => {
+      const b = e.target.closest('[data-preset]');
+      if (!b) return;
+      localStorage.setItem(CLAVE, JSON.stringify(TONOS_LISTOS[+b.dataset.preset][1]));
+      CC.colores.aplicar();
+      CC.router.show();
+    };
     el.onchange = e => {
       const clave = e.target.dataset.k;
       if (!clave) return;

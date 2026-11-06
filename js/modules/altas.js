@@ -1,4 +1,5 @@
-// Alta rápida: agrega VARIOS pines y stickers de golpe a un tema, sin capturar movimientos.
+// Alta rápida: agrega pines y stickers a un tema, uno por uno o VARIOS de golpe, sin capturar movimientos.
+// Cada alta lleva fecha y LOTE (se numera solo si no lo escribes) para saber de qué entrega es lo que queda.
 // Cada fila lleva un TIPO de producto (mini pin, pin gigante, sticker…): con él se calcula el costo, se sugiere
 // el precio y, si quieres, se descuentan del inventario los materiales que gasta cada pieza.
 (() => {
@@ -11,6 +12,13 @@
   const esPin = categoria => /pin/i.test(categoria || '');
   const esSticker = categoria => /stic?ker|stiker/i.test(categoria || '');
   const redondear = x => Math.round(x * 10000) / 10000;
+
+  // Código de lote automático: L-aaaammdd-n (n sube con cada alta del mismo día).
+  const nextLote = fecha => {
+    const pref = 'L-' + String(fecha).replace(/-/g, '') + '-';
+    const usados = db.all('movimientos').map(m => m.lote).filter(l => l && l.startsWith(pref)).map(l => +l.slice(pref.length) || 0);
+    return pref + (Math.max(0, ...usados) + 1);
+  };
 
   // Opciones del selector de tipo: los tipos de producto + las categorías que no tengan ninguno.
   const opcionesDeTipo = () => {
@@ -41,7 +49,8 @@
     const hayMateriales = db.all('tipos').some(t => CC.consumoTipo(t).length);
 
     ui.modal('Agregar varios al inventario', `
-      <p class="mute">Escribe tus diseños uno debajo de otro. El tipo, el precio y el costo de la primera fila se copian solos a las siguientes. Con <b>Enter</b> pasas de campo y se crea la siguiente fila.</p>
+      <div class="seg" id="av-modo" style="margin-bottom:10px"><button type="button" class="on" data-m="varios">📋 Varios (tabla)</button><button type="button" data-m="uno">1️⃣ Uno por uno</button></div>
+      <p class="mute" id="av-ayuda">Escribe tus diseños uno debajo de otro. El tipo, el precio y el costo de la primera fila se copian solos a las siguientes. Con <b>Enter</b> pasas de campo y se crea la siguiente fila.</p>
       <div class="grid2">
         <label>Guardar en el tema
           <select class="inp" name="tema">
@@ -52,9 +61,10 @@
         <div id="av-nuevo">${ui.inp('temaNuevo', 'Nombre del tema nuevo', '', 'text', 'placeholder="Ej. Gatos, Anime, Espacio"')}</div>
       </div>
       ${ui.inp('variante', 'Variante (opcional, para todos)', '', 'text', 'placeholder="Vacío = usa el nombre del tipo (Mini pin, Pin gigante…)"')}
+      <div class="grid2">${ui.inp('fecha', 'Fecha de entrada', ui.hoy(), 'date')}${ui.inp('lote', 'Lote (opcional)', '', 'text', `placeholder="Vacío = se numera solo, ej. ${nextLote(ui.hoy())}"`)}</div>
       ${hayMateriales ? `<label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;margin-top:8px"><input type="checkbox" name="descontar" checked> Descontar del inventario los materiales que gasta cada tipo (base, empaque…)</label>` : ''}
 
-      <div class="bar" style="margin:10px 0 6px">
+      <div class="bar" id="av-barra" style="margin:10px 0 6px">
         <b style="flex:1">Diseños</b>
         <button type="button" class="btn ghost sm" id="av-pegar">📋 Pegar lista</button>
       </div>
@@ -67,7 +77,7 @@
         <span>Tipo</span><span>Diseño</span><span>Cantidad</span><span>Precio</span><span>Costo</span>
       </div>
       <div id="av-filas">${Array.from({length: FILAS_INICIALES}, () => filaHtml(opciones, {tipo: inicial})).join('')}</div>
-      <div class="bar" style="margin-top:6px">
+      <div class="bar" id="av-agregar" style="margin-top:6px">
         <button type="button" class="btn ghost sm" id="av-mas">＋ Agregar fila</button>
         <button type="button" class="btn ghost sm" id="av-mas5">＋ 5 filas</button>
       </div>
@@ -81,7 +91,21 @@
     raiz.querySelector('.modal-box').style.maxWidth = '820px';
     const baseClick = raiz.onclick;
     const opcionDe = valor => opciones.find(o => o.valor === valor) || opciones[0];
-    const filasActuales = () => [...raiz.querySelectorAll('#av-filas .av-fila')];
+    let modo = 'varios';
+    const filasActuales = () => [...raiz.querySelectorAll('#av-filas .av-fila')].filter(f => f.style.display !== 'none');
+
+    // «Uno por uno» muestra una sola fila y Enter en la cantidad guarda; «Varios» muestra la tabla completa.
+    const aplicarModo = () => {
+      const uno = modo === 'uno';
+      [...raiz.querySelectorAll('#av-filas .av-fila')].forEach((f, i) => { f.style.display = uno && i > 0 ? 'none' : 'grid'; });
+      q('#av-agregar').style.display = q('#av-barra').style.display = uno ? 'none' : '';
+      if (uno) q('#av-lista').style.display = 'none';
+      raiz.querySelectorAll('#av-modo button').forEach(b => b.classList.toggle('on', b.dataset.m === modo));
+      q('#av-ayuda').textContent = uno
+        ? 'Captura un diseño a la vez. Con Enter en la cantidad se guarda. El tipo, el precio y el costo se calculan solos con el tipo elegido.'
+        : 'Escribe tus diseños uno debajo de otro. El tipo, el precio y el costo de la primera fila se copian solos a las siguientes. Con Enter pasas de campo y se crea la siguiente fila.';
+      resumen();
+    };
 
     const valoresDe = fila => ({
       tipo: fila.querySelector('.av-tipo').value,
@@ -154,10 +178,11 @@
           error = 'Falta material: ' + faltantes.map(x => `${x.m.nombre} (necesitas ${+x.necesita.toFixed(2)}, hay ${x.m.stock})`).join('; ') + '. Agrega material o desmarca «Descontar».';
         }
       }
-      return {error, nuevo, nombreTema, tema, variante, items, materiales, descontar};
+      const fecha = q('[name=fecha]').value || ui.hoy(), lote = q('[name=lote]').value.trim() || nextLote(fecha);
+      return {error, nuevo, nombreTema, tema, variante, items, materiales, descontar, fecha, lote};
     }
 
-    function guardar({nuevo, nombreTema, tema, variante, items, materiales, descontar}) {
+    function guardar({nuevo, nombreTema, tema, variante, items, materiales, descontar, fecha, lote}) {
       const copia = JSON.stringify(db.crudo());
       const destino = nuevo ? db.add('temas', {nombre: nombreTema, tipo: 'Ambos', notas: '', imagen: ''}) : tema;
       let nuevos = 0, existentes = 0, piezas = 0;
@@ -181,12 +206,12 @@
           if (!v.costo && i.costo) db.update('variantes', v.id, {costo: i.costo});
           if (!v.tipoId && i.tipo) db.update('variantes', v.id, {tipoId: i.tipo.id});
         }
-        if (i.cant > 0) { CC.mover(v.id, i.cant, 'entrada', 'Alta rápida · ' + destino.nombre); piezas += i.cant; }
+        if (i.cant > 0) { CC.mover(v.id, i.cant, 'entrada', 'Alta rápida · ' + destino.nombre, '', { fecha, lote }); piezas += i.cant; }
       });
 
       if (descontar) materiales.forEach(x => db.update('materiales', x.m.id, {stock: Math.max(0, redondear(x.m.stock - x.necesita))}));
 
-      ui.deshacer(`Agregado a «${destino.nombre}»: ${nuevos} nuevo(s)${existentes ? `, ${existentes} ya existía(n) y se les sumó stock` : ''} · ${piezas} pieza(s)${descontar && materiales.length ? ` · ${materiales.length} material(es) descontado(s)` : ''}.`, copia);
+      ui.deshacer(`Agregado a «${destino.nombre}»: ${nuevos} nuevo(s)${existentes ? `, ${existentes} ya existía(n) y se les sumó stock` : ''} · ${piezas} pieza(s) · lote ${lote}${descontar && materiales.length ? ` · ${materiales.length} material(es) descontado(s)` : ''}.`, copia);
       CC.router.show();
     }
 
@@ -229,6 +254,7 @@
       const fila = e.target.closest('.av-fila');
       if (!fila) return;
       if (e.target.classList.contains('av-nombre')) fila.querySelector('.av-cant').focus();
+      else if (e.target.classList.contains('av-cant') && modo === 'uno') raiz.querySelector('[data-ok]').click();
       else if (e.target.classList.contains('av-cant')) {
         const sig = fila.nextElementSibling || agregarFila();
         sig.querySelector('.av-nombre').focus();
@@ -238,7 +264,8 @@
     raiz.onclick = e => {
       const b = e.target.closest('button');
       if (!b) return baseClick(e);
-      if (b.id === 'av-mas') agregarFila().querySelector('.av-nombre').focus();
+      if (b.dataset.m) { modo = b.dataset.m; aplicarModo(); }
+      else if (b.id === 'av-mas') agregarFila().querySelector('.av-nombre').focus();
       else if (b.id === 'av-mas5') { for (let i = 0; i < 5; i++) agregarFila(); resumen(); }
       else if (b.id === 'av-pegar') q('#av-lista').style.display = q('#av-lista').style.display === 'none' ? '' : 'none';
       else if (b.id === 'av-aplicar') pasarLista();

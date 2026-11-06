@@ -1,6 +1,7 @@
-// Reportes con gráficas prediseñadas (sin librerías: funcionan sin internet y se adaptan a celular):
-// ventas por fecha, por tema, Pines/Stickers/Otros, tipos más vendidos, forma de pago, por bazar,
-// interés contra ventas y una tabla por tema (ventas, interés y ganancia). Todo se puede bajar en Excel.
+// Reportes con gráficas prediseñadas (sin librerías: funcionan sin internet y se adaptan a celular).
+// Cuatro pantallas con los mismos filtros (periodo y bazar), cada una con máximo 3 columnas:
+//   Resumen · Ventas · Productos · Bazares   (Interés y Rentabilidad son sus propias pestañas).
+// Todo se puede bajar en Excel.
 (() => {
   const {db, ui} = CC;
   const E = ui.esc, $ = ui.money, G = CC.grupos;
@@ -129,65 +130,106 @@
   }
 
   // ---------------------------------------------------------------------------------------------
-  // Pantalla
+  // Pantallas
   // ---------------------------------------------------------------------------------------------
-  CC.router.register('reportes', 'Reportes', '📉', el => {
-    const d = recopilar(), bazares = db.all('eventos');
-    const nombreBazar = id => id ? ((db.get('eventos', id) || {}).nombre || 'Bazar eliminado') : 'Sin bazar';
-    const filasBazar = [...d.porBazar].map(([id, x]) => ({label: nombreBazar(id), a: x.vendido, b: x.ganancia})).sort((p, q) => q.a - p.a).slice(0, 8);
-    const filasInteres = d.filasTema.filter(f => f.consultas || f.piezas).slice(0, 8).map(f => ({label: f.tema, a: f.consultas, b: f.piezas}));
-    const opcion = (v, actual, t) => `<option value="${v}" ${String(v) === String(actual) ? 'selected' : ''}>${t}</option>`;
-    const kpi = (t, v, c = '') => `<div class="kpi"><small>${t}</small><b class="${c}">${v}</b></div>`;
+  const nombreBazar = id => id ? ((db.get('eventos', id) || {}).nombre || 'Bazar eliminado') : 'Sin bazar';
+  const opcion = (v, actual, t) => `<option value="${v}" ${String(v) === String(actual) ? 'selected' : ''}>${t}</option>`;
+  const kpi = (t, v, c = '') => `<div class="kpi"><small>${t}</small><b class="${c}">${v}</b></div>`;
+  const tarjeta = (t, c, ayuda = '') => `<div class="card"><h3>${t}</h3>${ayuda ? `<p class="mute" style="margin-top:-6px">${ayuda}</p>` : ''}${c}</div>`;
+  const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
+  function descargar(d) {
+    if (!d.ventas.length && !d.filasTema.length) return ui.toast('No hay datos para descargar en este periodo');
+    CC.excel.descargar('reportes-' + ui.hoy(), {
+      'Por tema': d.filasTema.map(f => ({Tema: f.tema, Piezas: f.piezas, Vendido: r2(f.ingreso), Ganancia: r2(f.ganancia), Consultas: f.consultas, 'En stock': f.stock})),
+      'Por fecha': [...d.porDia].sort().map(([f, x]) => ({Fecha: f, Ventas: x.ventas, Total: r2(x.total)})),
+      'Por bazar': [...d.porBazar].map(([id, x]) => ({Bazar: nombreBazar(id), Ventas: x.ventas, Vendido: r2(x.vendido), Ganancia: r2(x.ganancia)})),
+      'Por tipo': [...d.porTipo].map(([t, x]) => ({Tipo: t, Piezas: x.piezas, Ingresos: r2(x.ingreso)})).sort((a, b) => b.Piezas - a.Piezas),
+      'Forma de pago': [...d.porPago].map(([p, x]) => ({Pago: p, Total: r2(x.total)}))
+    });
+  }
+
+  // Marco común de las cuatro pantallas: título, filtros y cuerpo.
+  function armar(el, titulo, ayuda, cuerpo) {
+    const d = recopilar(), bazares = db.all('eventos');
     el.innerHTML = `
       <div class="bar">
-        <div style="flex:1;min-width:220px"><h3 style="margin:0">Reportes</h3><p class="mute" style="margin:2px 0 0">Gráficas listas para ver cómo va el negocio. Cambia el periodo o el bazar y todo se actualiza.</p></div>
+        <div style="flex:1;min-width:220px"><h3 style="margin:0">${titulo}</h3><p class="mute" style="margin:2px 0 0">${ayuda}</p></div>
         <button class="btn" id="xls">⬇️ Descargar Excel</button>
       </div>
       <div class="card"><div class="grid3">
         <label>Periodo<select class="inp" name="rango">${[['7', 'Últimos 7 días'], ['30', 'Últimos 30 días'], ['90', 'Últimos 90 días'], ['365', 'Último año'], ['todo', 'Todo'], ['custom', 'Elegir fechas…']].map(([v, t]) => opcion(v, filtro.rango, t)).join('')}</select></label>
         <label>Bazar<select class="inp" name="bazar">${opcion('all', filtro.bazar, 'Todos')}${opcion('none', filtro.bazar, 'Sin bazar')}${bazares.map(b => opcion(b.id, filtro.bazar, '🎪 ' + E(b.nombre))).join('')}</select></label>
         ${filtro.rango === 'custom' ? `<div class="grid2">${ui.inp('desde', 'Desde', filtro.desde, 'date')}${ui.inp('hasta', 'Hasta', filtro.hasta, 'date')}</div>` : '<div></div>'}
-      </div></div>
-
-      <div class="kpis">
-        ${kpi('Ventas', d.ventas.length)}${kpi('Piezas vendidas', d.piezas)}${kpi('Total vendido', $(d.total), 'pos-n')}${kpi('Ganancia', $(d.ganancia), d.ganancia < 0 ? 'neg' : 'pos-n')}
-      </div>
-
-      <div class="card"><h3>📅 Ventas por fecha</h3>${columnas(seriePorFecha(d))}</div>
-
-      <div class="grid2" style="align-items:start">
-        <div class="card"><h3>🗂️ Ventas por tema</h3>${barrasH(d.filasTema.filter(f => f.ingreso).slice(0, 8).map(f => ({label: f.tema, valor: f.ingreso})), $)}</div>
-        <div class="card"><h3>📍 Pines · Stickers · Otros</h3>${dona(['Pines', 'Stickers', 'Otros'].filter(s => d.porSeccion.has(s)).map((s, i) => ({label: s, valor: d.porSeccion.get(s).ingreso, color: COLORES[i]})), $)}</div>
-      </div>
-      <div class="grid2" style="align-items:start">
-        <div class="card"><h3>🏆 Tipos más vendidos</h3>${barrasH([...d.porTipo].map(([label, x]) => ({label, valor: x.piezas})).sort((a, b) => b.valor - a.valor).slice(0, 8), n => n + ' pzs')}</div>
-        <div class="card"><h3>💳 Forma de pago</h3>${dona([...d.porPago].map(([label, x], i) => ({label, valor: x.total, color: COLORES[i]})), $)}</div>
-      </div>
-      <div class="grid2" style="align-items:start">
-        <div class="card"><h3>🎪 Por bazar: vendido y ganancia</h3>${barrasDobles(filasBazar, ['Vendido', 'Ganancia'], [$, $])}</div>
-        <div class="card"><h3>❓ Interés contra ventas</h3><p class="mute" style="margin-top:-6px">Lo que preguntan contra lo que se vende, por tema.</p>${barrasDobles(filasInteres, ['Consultas', 'Piezas vendidas'], [n => n, n => n])}</div>
-      </div>
-
-      <div class="card"><h3>📋 Resumen por tema</h3>
-        <table class="tabla-resp"><thead><tr><th>Tema</th><th>Piezas</th><th>Vendido</th><th>Ganancia</th><th>Consultas</th><th>En stock</th></tr></thead>
-        <tbody>${d.filasTema.map(f => `<tr><td data-l="Tema"><b>${E(f.tema)}</b></td><td data-l="Piezas">${f.piezas}</td><td data-l="Vendido">${$(f.ingreso)}</td>
-          <td data-l="Ganancia" class="${f.ganancia < 0 ? 'neg' : 'pos-n'}">${$(f.ganancia)}</td><td data-l="Consultas">${f.consultas}</td><td data-l="En stock">${f.stock}</td></tr>`).join('') || '<tr><td colspan="6" class="mute">Sin datos en este periodo.</td></tr>'}</tbody></table></div>`;
-
+      </div></div>` + cuerpo(d);
     el.onchange = e => {
       if (!(e.target.name in filtro)) return;
       filtro[e.target.name] = e.target.value;
       CC.router.show();
     };
-    el.querySelector('#xls').onclick = () => {
-      if (!d.ventas.length && !d.filasTema.length) return ui.toast('No hay datos para descargar en este periodo');
-      CC.excel.descargar('reportes-' + ui.hoy(), {
-        'Por tema': d.filasTema.map(f => ({Tema: f.tema, Piezas: f.piezas, Vendido: r2(f.ingreso), Ganancia: r2(f.ganancia), Consultas: f.consultas, 'En stock': f.stock})),
-        'Por fecha': [...d.porDia].sort().map(([f, x]) => ({Fecha: f, Ventas: x.ventas, Total: r2(x.total)})),
-        'Por bazar': [...d.porBazar].map(([id, x]) => ({Bazar: nombreBazar(id), Ventas: x.ventas, Vendido: r2(x.vendido), Ganancia: r2(x.ganancia)})),
-        'Por tipo': [...d.porTipo].map(([t, x]) => ({Tipo: t, Piezas: x.piezas, Ingresos: r2(x.ingreso)})).sort((a, b) => b.Piezas - a.Piezas),
-        'Forma de pago': [...d.porPago].map(([p, x]) => ({Pago: p, Total: r2(x.total)}))
-      });
-    };
-  });
+    el.querySelector('#xls').onclick = () => descargar(d);
+  }
+
+  const grid3 = html => `<div class="grid3" style="align-items:start">${html}</div>`;
+  const topTemas = d => barrasH(d.filasTema.filter(f => f.ingreso).slice(0, 8).map(f => ({label: f.tema, valor: f.ingreso})), $);
+  const porPago = d => dona([...d.porPago].map(([label, x], i) => ({label, valor: x.total, color: COLORES[i]})), $);
+
+  // ---- Resumen: lo más importante de un vistazo ----
+  CC.router.register('reportes', 'Resumen', '📋', el => armar(el, 'Resumen', 'Cómo va el negocio de un vistazo. Cambia el periodo o el bazar y todo se actualiza.', d => `
+    <div class="kpis">
+      ${kpi('Ventas', d.ventas.length)}${kpi('Piezas vendidas', d.piezas)}${kpi('Total vendido', $(d.total), 'pos-n')}${kpi('Ganancia', $(d.ganancia), d.ganancia < 0 ? 'neg' : 'pos-n')}
+    </div>
+    ${tarjeta('📅 Ventas por fecha', columnas(seriePorFecha(d)))}
+    ${grid3(
+      tarjeta('🗂️ Ventas por tema', topTemas(d)) +
+      tarjeta('📍 Pines · Stickers · Otros', dona(['Pines', 'Stickers', 'Otros'].filter(s => d.porSeccion.has(s)).map((s, i) => ({label: s, valor: d.porSeccion.get(s).ingreso, color: COLORES[i]})), $)) +
+      tarjeta('💳 Forma de pago', porPago(d)))}`));
+
+  // ---- Ventas: cuándo y cómo se vende ----
+  CC.router.register('reportes-ventas', 'Ventas', '💵', el => armar(el, 'Ventas', 'Cuánto, cuándo y cómo se paga.', d => {
+    const semana = Array(7).fill(0);
+    d.porDia.forEach((x, f) => { semana[(new Date(f + 'T00:00:00').getDay() + 6) % 7] += x.total; });
+    const comision = d.ventas.reduce((s, v) => s + (v.comision || 0), 0);
+    return `
+    <div class="kpis">
+      ${kpi('Ventas', d.ventas.length)}${kpi('Ticket promedio', d.ventas.length ? $(d.total / d.ventas.length) : '—')}${kpi('Total vendido', $(d.total), 'pos-n')}${kpi('Comisión de terminal', $(comision), comision ? 'neg' : '')}
+    </div>
+    ${tarjeta('📅 Ventas por fecha', columnas(seriePorFecha(d)))}
+    ${grid3(
+      tarjeta('💳 Forma de pago', porPago(d)) +
+      tarjeta('🗓️ Por día de la semana', barrasH(DIAS.map((label, i) => ({label, valor: semana[i]})).filter(x => x.valor > 0), $)) +
+      tarjeta('🎪 Vendido por bazar', barrasH([...d.porBazar].map(([id, x]) => ({label: nombreBazar(id), valor: x.vendido})).sort((a, b) => b.valor - a.valor).slice(0, 8), $)))}`;
+  }));
+
+  // ---- Productos: qué se vende y qué deja ganancia ----
+  CC.router.register('reportes-productos', 'Productos', '🏷️', el => armar(el, 'Productos', 'Qué tipos y temas se venden más y cuáles dejan más ganancia.', d => `
+    <div class="kpis">
+      ${kpi('Piezas vendidas', d.piezas)}${kpi('Tipos distintos vendidos', d.porTipo.size)}${kpi('Ganancia', $(d.ganancia), d.ganancia < 0 ? 'neg' : 'pos-n')}${kpi('Margen', d.total ? Math.round(d.ganancia / d.total * 100) + '%' : '—')}
+    </div>
+    ${grid3(
+      tarjeta('🏆 Tipos más vendidos', barrasH([...d.porTipo].map(([label, x]) => ({label, valor: x.piezas})).sort((a, b) => b.valor - a.valor).slice(0, 8), n => n + ' pzs')) +
+      tarjeta('🗂️ Ventas por tema', topTemas(d)) +
+      tarjeta('💰 Ganancia por tema', barrasH(d.filasTema.filter(f => f.ganancia > 0).slice().sort((a, b) => b.ganancia - a.ganancia).slice(0, 8).map(f => ({label: f.tema, valor: f.ganancia})), $)))}
+    ${tarjeta('📋 Resumen por tema', `<table class="tabla-resp"><thead><tr><th>Tema</th><th>Piezas</th><th>Vendido</th><th>Ganancia</th><th>Consultas</th><th>En stock</th></tr></thead>
+      <tbody>${d.filasTema.map(f => `<tr><td data-l="Tema"><b>${E(f.tema)}</b></td><td data-l="Piezas">${f.piezas}</td><td data-l="Vendido">${$(f.ingreso)}</td>
+        <td data-l="Ganancia" class="${f.ganancia < 0 ? 'neg' : 'pos-n'}">${$(f.ganancia)}</td><td data-l="Consultas">${f.consultas}</td><td data-l="En stock">${f.stock}</td></tr>`).join('') || '<tr><td colspan="6" class="mute">Sin datos en este periodo.</td></tr>'}</tbody></table>`)}`));
+
+  // ---- Bazares: cómo le fue a cada uno ----
+  CC.router.register('reportes-bazares', 'Bazares', '🎪', el => armar(el, 'Bazares', 'Vendido, ganancia, interés de los clientes y juegos de cada bazar.', d => {
+    const filasBazar = [...d.porBazar].map(([id, x]) => ({label: nombreBazar(id), a: x.vendido, b: x.ganancia})).sort((p, q) => q.a - p.a).slice(0, 8);
+    const filasInteres = d.filasTema.filter(f => f.consultas || f.piezas).slice(0, 8).map(f => ({label: f.tema, a: f.consultas, b: f.piezas}));
+    const enRango = f => !f || ((!d.desde || f >= d.desde) && (!d.hasta || f <= d.hasta));
+    const juegos = db.all('eventos').filter(b => filtro.bazar === 'all' || (filtro.bazar !== 'none' && b.id === filtro.bazar))
+      .map(b => ({label: b.nombre, valor: (b.ingresos || []).filter(x => x.juegoId && enRango(x.fecha)).reduce((s, x) => s + x.monto, 0)})).filter(x => x.valor > 0).sort((p, q) => q.valor - p.valor).slice(0, 8);
+    return `
+    <div class="kpis">
+      ${kpi('Bazares con ventas', [...d.porBazar.keys()].filter(Boolean).length)}${kpi('Total vendido', $(d.total), 'pos-n')}${kpi('Ganancia', $(d.ganancia), d.ganancia < 0 ? 'neg' : 'pos-n')}${kpi('🎲 Juegos contados', $(juegos.reduce((s, x) => s + x.valor, 0)))}
+    </div>
+    ${grid3(
+      tarjeta('🎪 Vendido y ganancia', barrasDobles(filasBazar, ['Vendido', 'Ganancia'], [$, $])) +
+      tarjeta('❓ Interés contra ventas', barrasDobles(filasInteres, ['Consultas', 'Piezas vendidas'], [n => n, n => n]), 'Lo que preguntan contra lo que se vende, por tema.') +
+      tarjeta('🎲 Juegos contados', barrasH(juegos, $), 'Dinero contado en juegos de cada bazar.'))}
+    ${tarjeta('📋 Resumen por bazar', `<table class="tabla-resp"><thead><tr><th>Bazar</th><th>Ventas</th><th>Vendido</th><th>Ganancia</th></tr></thead>
+      <tbody>${[...d.porBazar].sort((p, q) => q[1].vendido - p[1].vendido).map(([id, x]) => `<tr><td data-l="Bazar"><b>${E(nombreBazar(id))}</b></td><td data-l="Ventas">${x.ventas}</td><td data-l="Vendido">${$(x.vendido)}</td><td data-l="Ganancia" class="${x.ganancia < 0 ? 'neg' : 'pos-n'}">${$(x.ganancia)}</td></tr>`).join('') || '<tr><td colspan="4" class="mute">Sin datos en este periodo.</td></tr>'}</tbody></table>`)}`;
+  }));
 })();

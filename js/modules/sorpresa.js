@@ -1,4 +1,4 @@
-// Bolsita sorpresa: las piezas que no salen en varios bazares pasan a una RESERVA, y de ahí se arman bolsitas
+// Bolsita sorpresa (vive dentro de Comparativa): las piezas que no salen en varios bazares pasan a una RESERVA, y de ahí se arman bolsitas
 // (ej. 3 pines + 1 sticker) que se venden como cualquier producto en Venta y Modo bazar.
 // La regla de «cuántos bazares sin salir» se cambia en Ajustes → Reglas.
 (() => {
@@ -141,7 +141,8 @@
   // ---------------------------------------------------------------------------------------------
   // Pantalla: Inventario → Bolsita sorpresa
   // ---------------------------------------------------------------------------------------------
-  CC.router.register('sorpresa', 'Bolsita sorpresa', '🎁', el => {
+  // Se dibuja dentro de Bazares → Comparativa → pestaña «Bolsita sorpresa» (comparativa.js).
+  CC.sorpresaUI = el => {
     const a = CC.analisisBazares(), reglas = a.reglas, reserva = reservaPorGrupo();
     const bolsas = db.all('variantes').filter(esBolsita);
     const kpi = (t, v, d = '') => `<div class="kpi"><small>${t}</small><b>${v}</b>${d ? `<span class="mute">${d}</span>` : ''}</div>`;
@@ -187,11 +188,11 @@
       if (d.a === 'pasar') formPasar();
       else if (d.a === 'pasarEste') formPasar(d.k);
       else if (d.a === 'armar') formArmar();
-      else if (d.a === 'comparativa') location.hash = 'comparativa';
+      else if (d.a === 'comparativa') CC.comparativa.ir('comparar');
       else if (d.a === 'reglas') location.hash = 'reglas';
       else if (d.a === 'regresar') regresar(reserva.find(r => r.g.clave === d.k));
     };
-  });
+  };
 
   // ---------------------------------------------------------------------------------------------
   // Pantalla: Ajustes → Reglas (cuándo una pieza se vuelve candidata a la bolsita sorpresa)

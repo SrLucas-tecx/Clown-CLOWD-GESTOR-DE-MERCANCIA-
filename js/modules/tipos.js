@@ -72,7 +72,7 @@
   function form(tipo) {
     const t = tipo || {}, categorias = CC.categorias.lista().map(c => c.nombre), materiales = db.all('materiales');
     const filaReceta = (r = {}) => `
-      <div class="tp-r" style="display:grid;grid-template-columns:1fr 110px 38px;gap:6px;margin-bottom:6px">
+      <div class="tp-r" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(88px,110px) 38px;gap:6px;margin-bottom:6px">
         <select class="inp rm">${materiales.map(m => `<option value="${m.id}" ${m.id === r.materialId ? 'selected' : ''}>${E(m.nombre)} (${E(m.unidad)})</option>`).join('')}</select>
         <input class="inp rc" type="number" step="0.01" min="0" placeholder="Cant. por pieza" value="${r.cant ?? ''}">
         <button type="button" class="btn ghost sm" data-rm title="Quitar">✕</button>
@@ -92,7 +92,7 @@
         ${ui.inp('extra', 'Extras por pieza ($)', t.extra ?? 0, 'number', 'step="0.01" min="0"')}
       </div>
       <p class="mute" style="margin:4px 0 0">Ejemplo: una hoja de vinil de $10 con 12 stickers y 10% de merma cuesta ≈ $0.93 por sticker.</p>
-      <div class="bar" style="margin:12px 0 4px"><b style="flex:1">Materiales que usa cada pieza</b><span class="mute">Lo que gasta por defecto: alfiler, tarjeta, bolsita…</span></div>
+      <div style="margin:14px 0 6px"><b>Materiales que usa cada pieza</b><div class="mute">Lo que gasta por defecto: alfiler, tarjeta, bolsita…</div></div>
       <div id="tp-receta">${(t.receta || []).map(filaReceta).join('')}</div>
       <button type="button" class="btn ghost sm" id="tp-add">＋ Agregar material</button>
       <div class="card" id="tp-res" style="margin:10px 0 0;font-size:.9rem"></div>`, m => {
@@ -105,6 +105,7 @@
       refrescar();
     });
     const raiz = document.getElementById('modal'), baseClick = raiz.onclick;
+    raiz.querySelector('.modal-box').style.maxWidth = '680px';
     const previa = () => {
       const o = ui.vals(raiz), temporal = {materialId: o.materialId, piezas: o.piezas, merma: o.merma, extra: o.extra, receta: leerReceta(raiz)};
       const costo = CC.costoTipo(temporal), sugerido = CC.precioSugerido(costo);
@@ -153,7 +154,7 @@
           <b>${E(t.nombre)}</b>
           <div class="mute">${material && !material.eliminado ? `${E(material.nombre)} · salen ${+t.piezas} por ${E(material.unidad)}${t.merma ? ` · merma ${+t.merma}%` : ''}` : '<span class="warn">Sin material asignado</span>'}${t.extra ? ` · extras ${$(t.extra)}` : ''}</div>
           ${(t.receta || []).length ? `<div class="mute">Incluye: ${t.receta.map(r => { const m = db.get('materiales', r.materialId); return m ? E(m.nombre) + ' ×' + r.cant : ''; }).filter(Boolean).join(', ')}</div>` : ''}
-          <div style="display:flex;gap:18px;margin:6px 0">
+          <div style="display:flex;flex-wrap:wrap;gap:8px 18px;margin:6px 0">
             <div><small class="mute">Costo por pieza</small><div style="font:800 1.4rem var(--font-display)">${$(costo)}</div></div>
             <div><small class="mute">Precio sugerido</small><div style="font:800 1.4rem var(--font-display)">${sugerido ? $(sugerido) : '—'}</div></div>
           </div>
@@ -170,7 +171,7 @@
       </div>
 
       <div class="card">
-        <div class="grid3" style="align-items:end">
+        <div class="grid3 tp-ajuste" style="align-items:end">
           ${ui.inp('margen', 'Margen neto deseado (%)', margen(), 'number', 'min="0" max="90" step="1"')}
           <div><small class="mute">Comisión de terminal real</small><div><b>${(tasa * 100).toFixed(1)}%</b> <span class="mute">${tasa ? 'de tus ventas' : '(aún sin ventas con tarjeta)'}</span></div></div>
           <div class="mute">Precio sugerido = costo ÷ (1 − margen − comisión), redondeado al peso.</div>

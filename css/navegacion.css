@@ -1,11 +1,10 @@
 /* ==========================================================================
    CLOWN CLOUD · navegacion.css
-   Barra superior fija: marca + secciones (horizontal) + accesos rápidos,
-   y debajo las pestañas de la sección. En celular la barra de secciones
-   baja a su propia fila y se desliza con el dedo.
+   Barra superior fija: marca + secciones + accesos rápidos.
+   En celular, la barra principal se mueve a la parte inferior (Bottom Nav).
    ========================================================================== */
 
-:root { --topbar-h: 104px; } /* se recalcula en js/app.js con la altura real */
+:root { --topbar-h: 104px; }
 
 .topbar {
   position: sticky;
@@ -64,7 +63,7 @@
 }
 .nav-item:hover { color: var(--ink); background: color-mix(in srgb, var(--azul-600) 28%, transparent); }
 .nav-item.active { color: var(--ink); border-bottom-color: var(--rojo); background: var(--rojo-soft); }
-.nav-ico { font-size: 1.15rem; line-height: 1; }
+.nav-ico { display: block; flex: 0 0 18px; width: 18px; height: 18px; }
 
 /* ---------- Accesos rápidos ---------- */
 .topbar-actions {
@@ -115,7 +114,7 @@
   outline-offset: -2px;
 }
 
-/* ---------- Tableta (≤ 900 px): la barra de secciones baja a su propia fila ---------- */
+/* ---------- Tableta (≤ 900 px) ---------- */
 @media (max-width: 900px) {
   .topbar-row {
     flex-wrap: wrap;
@@ -126,6 +125,8 @@
   }
   .brand { min-height: 52px; }
   .topbar-actions { margin-left: auto; }
+  
+  /* Solo en tableta se mantiene debajo del logo, en celular cambia radicalmente */
   .main-nav {
     order: 3;
     flex: 1 0 100%;
@@ -138,15 +139,48 @@
   .subnav { padding: 0 6px; }
 }
 
-/* ---------- Celular (≤ 600 px): accesos rápidos solo con ícono ---------- */
+/* ---------- Celular (≤ 600 px): Bottom Nav y limpieza visual ---------- */
 @media (max-width: 600px) {
   .logo-word { font-size: .9rem; }
   .topbar-actions { gap: 6px; }
   .topbar-actions .btn { padding: 0 12px; }
   .topbar-actions .txt { display: none; }
-  .topbar-actions #cta .txt { display: inline; } /* «Venta rápida» siempre con texto */
-  .nav-item { padding: 0 12px; font-size: .85rem; }
-  .nav-ico { font-size: 1.05rem; }
+  .topbar-actions #cta .txt { display: inline; } 
+
+  /* Transformación a Bottom Navigation */
+  .main-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 90; 
+    background: var(--azul-950);
+    border-top: 1px solid var(--line);
+    border-bottom: none;
+    margin: 0;
+    padding: 6px 12px calc(6px + env(safe-area-inset-bottom, 0));
+    justify-content: space-around; 
+    align-items: center;
+    flex-wrap: nowrap;
+    overflow-x: visible;
+  }
+  
+  .nav-item { 
+    flex-direction: column; 
+    gap: 4px;
+    padding: 6px 4px; 
+    font-size: .75rem; 
+    border-bottom: none;
+    border-radius: 8px;
+    flex: 1 1 0;
+  }
+  
+  .nav-item.active { 
+    background: transparent;
+    color: var(--rojo-300);
+  }
+  
+  .nav-ico { font-size: 1.25rem; margin-bottom: 2px; }
 }
 
 @media (max-width: 380px) {

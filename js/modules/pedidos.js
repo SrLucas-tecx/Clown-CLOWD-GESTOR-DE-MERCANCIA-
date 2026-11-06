@@ -341,6 +341,20 @@
     'Listo': 'var(--color-success, #3fd08f)',
     'Entregado': 'var(--azul-600)'
   };
+  // Semáforo de producción: rojo por hacer, amarillo en producción, verde listo, palomita entregado.
+  const SEMAFORO = {'Por hacer': '🔴', 'En producción': '🟡', 'Listo': '🟢', 'Entregado': '✅'};
+
+  // Cambia el estado desde la tarjeta, siempre con confirmación. «Entregado» genera la venta (ventana propia).
+  function cambiarEstado(p, nuevo) {
+    if (!p || nuevo === p.estado) return;
+    if (p.estado === 'Entregado') return ui.toast('No se puede: el pedido ya está entregado y generó una venta');
+    if (nuevo === 'Entregado') return entregar(p);
+    ui.confirm(`El pedido ${p.folio} pasará de «${p.estado}» a «${nuevo}».`, 'Cambiar estado').then(ok => {
+      if (!ok) return;
+      db.update('pedidos', p.id, { estado: nuevo });
+      CC.router.show();
+    });
+  }
   const ganancia = p => r2(p.items.reduce((s, i) => s + (i.precio - (i.costo || 0)) * i.cant, 0) + (desglose(p).total - desglose(p).subtotal));
   const normal = x => String(x || '').trim().toLowerCase();
   let filtroCliente = 'all'; // 'all' | 'none' | id de cliente
@@ -519,9 +533,11 @@
         ${p.anticipo ? `<div class="line"><span>Anticipo</span><span>${$(p.anticipo)}</span></div>` : ''}
         <div class="line"><span>Saldo por cobrar</span><b class="${p.estado === 'Entregado' ? 'pos-n' : saldo ? 'neg' : ''}">${$(p.estado === 'Entregado' ? 0 : saldo)}</b></div>
         <div class="line"><span>Ganancia</span><b class="pos-n">${$(ganancia(p))}</b></div>
-        <div class="bar" style="margin:10px 0 0">
+        <div style="display:flex;flex-wrap:wrap;gap:4px;margin:10px 0 0" title="Estado del pedido">
+          ${ESTADOS.map(est => `<button class="btn ${est === p.estado ? '' : 'ghost'} sm" data-est="${p.id}" data-to="${est}" ${p.estado === 'Entregado' && est !== p.estado ? 'disabled' : ''}>${SEMAFORO[est]} ${est}</button>`).join('')}
+        </div>
+        <div class="bar" style="margin:8px 0 0">
           <button class="btn sm" data-v="${p.id}">👁 Ver</button>
-          ${sig ? `<button class="btn ghost sm" data-a="${p.id}">→ ${sig}</button>` : ''}
           <button class="btn ghost sm" data-c="${p.id}">👤 ${c ? 'Cliente' : 'Asignar cliente'}</button>
           <button class="btn ghost sm" data-p="${p.id}">📄 PDF</button>
           <button class="btn ghost sm" data-d="${p.id}">⧉ Duplicar</button>
@@ -564,7 +580,8 @@
       const b = e.target.closest('button');
       if (!b) return;
       const g = clave => db.get('pedidos', b.dataset[clave]);
-      if (b.dataset.s) { fe = b.dataset.s; CC.router.show(); }
+      if (b.dataset.est) cambiarEstado(g('est'), b.dataset.to);
+      else if (b.dataset.s) { fe = b.dataset.s; CC.router.show(); }
       else if (b.dataset.v) ver(g('v'));
       else if (b.dataset.a) avanzar(g('a'));
       else if (b.dataset.c) asignarCliente(g('c'));

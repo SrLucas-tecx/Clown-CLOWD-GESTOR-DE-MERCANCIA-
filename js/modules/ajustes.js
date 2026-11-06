@@ -1,4 +1,4 @@
-// Ajustes → General: comisión de terminal, lista básica de maleta y etiquetas.
+// Ajustes → General: comisión de terminal, bazar activo, lista básica de maleta y etiquetas.
 (() => {
   const {ui} = CC, E = ui.esc;
   const CLAVE_MALETA = 'clowncloud:maletaBase';
@@ -21,7 +21,7 @@
   };
 
   CC.router.register('general', 'General', '⚙️', el => {
-    const lista = CC.ajustes.listaMaleta();
+    const lista = CC.ajustes.listaMaleta(), bazares = CC.db.all('eventos'), activo = CC.grupos.bazarActivo();
 
     el.innerHTML = `
       <div class="grid2" style="align-items:start">
@@ -30,6 +30,11 @@
             <h3 style="margin:0 0 4px">💳 Comisión de terminal</h3>
             <p class="mute" style="margin:0 0 8px">Porcentaje que cobra la terminal en pagos con tarjeta. Aplica a las ventas nuevas.</p>
             ${ui.inp('com', 'Comisión (%)', ui.cfg.comision(), 'number', 'step="0.1" min="0" max="100"')}
+          </div>
+          <div class="card">
+            <h3 style="margin:0 0 4px">🎪 Bazar activo</h3>
+            <p class="mute" style="margin:0 0 8px">El bazar que se elige solo en Venta, Modo bazar y Caja. Puedes cambiarlo en cualquiera de ellos.</p>
+            <select class="inp" id="activo"><option value="">Ninguno (caja general)</option>${bazares.map(b => `<option value="${b.id}" ${b.id === activo ? 'selected' : ''}>🎪 ${E(b.nombre)}</option>`).join('')}</select>
           </div>
           <div class="card">
             <h3 style="margin:0 0 4px">🏷️ Etiquetas</h3>
@@ -65,6 +70,7 @@
     };
 
     el.onchange = e => {
+      if (e.target.id === 'activo') { CC.grupos.guardarBazarActivo(e.target.value); return ui.toast('Bazar activo guardado'); }
       if (e.target.name !== 'com') return;
       const n = +e.target.value;
       if (!(n >= 0 && n <= 100)) {

@@ -258,23 +258,34 @@
     refrescar();
   }
 
-  // Cierra la mercancía del bazar: cuentas lo que regresó y el faltante se registra como merma.
+  // Cierra la mercancía del bazar: cuentas lo que regresó; lo que falte se registra como merma
+  // con su motivo y, si quieres, un nombre o nota (qué diseño o qué pasó).
+  const MOTIVOS_MERMA = ['Perdido', 'Dañado', 'Regalo o promoción', 'Robo', 'Otro'];
   function cerrarMercancia(e) {
     const maleta = maletaDe(e.id);
     if (!maleta || !maleta.items.length) return ui.toast('Este bazar no tiene mercancía asignada');
     if (maleta.cerrada) return ui.toast(ESTA_CERRADA);
     const items = mercanciaDe(e);
     ui.modal('Cerrar mercancía · ' + E(e.nombre),
-      '<p class="mute">Cuenta lo que regresó. Si falta algo, se registra como merma.</p>' + items.map(i => `
-        <div class="line"><span>${E(CC.nombreVar(i.v))}<div class="mute">llevaste ${i.llevo} · vendiste ${i.vend} · esperado ${i.rest}</div></span>
-          <input class="inp rg" data-v="${i.v.id}" type="number" min="0" value="${i.rest}" style="width:90px"></div>`).join(''), m => {
-        const reg = [...m.querySelectorAll('.rg')].map(r => ({varianteId: r.dataset.v, regreso: +r.value}));
+      '<p class="mute">Cuenta lo que regresó. Si falta algo, se registra como merma: elige el motivo y, si quieres, ponle nombre.</p>' + items.map(i => `
+        <div class="cm-fila" data-v="${i.v.id}" data-rest="${i.rest}" style="border-bottom:1px dashed var(--line);padding:8px 0">
+          <div class="line" style="border:0;padding:0"><span>${E(CC.nombreVar(i.v))}<div class="mute">llevaste ${i.llevo} · vendiste ${i.vend} · esperado ${i.rest}</div></span>
+            <input class="inp rg" data-v="${i.v.id}" type="number" min="0" value="${i.rest}" style="width:90px"></div>
+          <div class="cm-falta" style="display:none;margin-top:6px">
+            <div class="neg cm-aviso" style="font-size:.8rem;margin-bottom:4px"></div>
+            <div class="grid2"><select class="inp cm-mot">${MOTIVOS_MERMA.map(x => `<option>${x}</option>`).join('')}</select>
+              <input class="inp cm-nota" placeholder="Nombre o nota (opcional)"></div></div>
+        </div>`).join(''), m => {
+        const reg = [...m.querySelectorAll('.cm-fila')].map(f => ({
+          varianteId: f.dataset.v, regreso: +f.querySelector('.rg').value,
+          motivo: f.querySelector('.cm-mot').value, nota: f.querySelector('.cm-nota').value.trim()
+        }));
         if (reg.some(r => !(r.regreso >= 0))) { ui.toast('No se puede: el regreso no puede ser negativo'); return false; }
         const dif = reg.map(r => ({...r, d: items.find(i => i.v.id === r.varianteId).rest - r.regreso}));
         const falta = dif.filter(f => f.d > 0), sobra = dif.filter(f => f.d < 0), piezasFaltan = falta.reduce((s, f) => s + f.d, 0);
         const hecho = () => {
           const copia = JSON.stringify(db.crudo());
-          falta.forEach(f => CC.mover(f.varianteId, -f.d, 'merma', 'Faltante de bazar ' + e.nombre, maleta.id));
+          falta.forEach(f => CC.mover(f.varianteId, -f.d, 'merma', `Faltante de bazar ${e.nombre} · ${f.motivo}${f.nota ? ' · ' + f.nota : ''}`, maleta.id));
           db.update('maletas', maleta.id, {cerrada: true, cierre: reg});
           refrescar();
           ui.deshacer('Mercancía cerrada' + (piezasFaltan ? `: ${piezasFaltan} pieza(s) como merma` : '') + '.', copia);
@@ -285,6 +296,15 @@
         }
         hecho();
       });
+    // Al escribir lo que regresó, aparece el motivo solo donde falta mercancía.
+    const raiz = document.getElementById('modal');
+    raiz.oninput = ev => {
+      const f = ev.target.closest('.cm-fila');
+      if (!f) return;
+      const falta = +f.dataset.rest - (+f.querySelector('.rg').value || 0);
+      f.querySelector('.cm-falta').style.display = falta > 0 ? '' : 'none';
+      f.querySelector('.cm-aviso').textContent = falta > 0 ? `Faltan ${falta} pieza(s): se registran como merma.` : '';
+    };
   }
 
   function quitarMercancia(e, varianteId) {

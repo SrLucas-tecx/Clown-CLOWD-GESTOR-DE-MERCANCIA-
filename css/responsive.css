@@ -144,3 +144,26 @@ video { max-width: 100%; height: auto; }
   .kpis { grid-template-columns: 1fr; }
   .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* 7. Ajustes finales (revisión en celular y tableta) */
+@media (max-width: 900px) {
+  /* Tarjetas con ancho mínimo escrito en línea (bazares, pedidos): que nunca se salgan de la pantalla */
+  .cards[style*="minmax(300px"] { grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)) !important; }
+}
+@media (max-width: 600px) {
+  .cards { grid-template-columns: 1fr !important; }
+  .kpi b { font-size: 1.4rem; }
+  .page-content { padding: 12px 10px 24px; }
+
+  /* Modo bazar: barra superior compacta */
+  .vt-over-top { padding: 8px 10px; }
+  .vt-over-top .inp,
+  .vt-over-top select { flex: 1 1 100%; max-width: 100% !important; }
+  .vt-over-top #mbv { flex: 1 1 100%; }
+
+  /* Comparativa y reportes: pestañas internas deslizables */
+  #cm-tabs { margin-bottom: 8px; }
+}
+@media (max-width: 380px) {
+  .den-grid { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); }
+}

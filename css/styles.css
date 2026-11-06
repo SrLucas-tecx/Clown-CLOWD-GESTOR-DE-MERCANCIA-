@@ -1,13 +1,9 @@
-/* CLOWN CLOUD — modo oscuro. Colores de marca: --color-bg (fondo azul), --color-accent (botones amarillos), --color-tab (pestañas rojas).
-   La barra superior y las pestañas de sección viven en navegacion.css. */
+/* CLOWN CLOUD — modo oscuro. */
 :root{color-scheme:dark;
- /* 3 colores base (editables en Ajustes → Apariencia): azul = fondos, amarillo = botones, rojo = pestañas */
  --azul:#1a2f61;--amarillo:#ffc933;--rojo:#e3363d;
- /* tonalidades derivadas de cada color base */
  --azul-950:color-mix(in srgb,var(--azul) 38%,black);--azul-900:color-mix(in srgb,var(--azul) 60%,black);--azul-800:color-mix(in srgb,var(--azul) 78%,black);--azul-700:var(--azul);--azul-600:color-mix(in srgb,var(--azul) 85%,white);--azul-300:color-mix(in srgb,var(--azul) 40%,white);
  --amarillo-300:color-mix(in srgb,var(--amarillo) 60%,white);--amarillo-600:color-mix(in srgb,var(--amarillo) 85%,black);--amarillo-soft:color-mix(in srgb,var(--amarillo) 15%,transparent);
  --rojo-300:color-mix(in srgb,var(--rojo) 55%,white);--rojo-600:color-mix(in srgb,var(--rojo) 80%,black);--rojo-soft:color-mix(in srgb,var(--rojo) 20%,transparent);
- /* roles de la interfaz */
  --color-bg:var(--azul-900);--color-surface:var(--azul-800);--color-surface-alt:var(--azul-700);--color-border:var(--azul-600);
  --color-accent:var(--amarillo);--color-accent-dark:var(--amarillo-600);--color-accent-soft:var(--amarillo-soft);
  --color-tab:var(--rojo);--color-tab-soft:var(--rojo-soft);
@@ -19,17 +15,29 @@ body{--bg:var(--color-bg);--card:var(--color-surface);--line:var(--color-border)
 button,input,select{font-family:inherit;color:inherit}button{cursor:pointer}
 h1,h2,h3{font-family:var(--font-display);margin:0 0 10px}h3{font-size:1.05rem}
 
-/* Layout: la página ocupa todo el ancho; el contenido queda pegado a la izquierda de forma natural */
 .app-layout{min-height:100vh;display:flex;flex-direction:column}
-.page-content{flex:1;width:100%;max-width:1920px;margin:0 auto;padding:20px clamp(12px,2vw,32px) 32px}
+/* Ancho máximo reducido a 1400px para evitar que las tarjetas se estiren demasiado */
+.page-content{flex:1;width:100%;max-width:1400px;margin:0 auto;padding:20px clamp(12px,2vw,32px) 32px}
 .btn-icon{display:flex;align-items:center;gap:8px;padding:8px 12px;border:0;border-radius:var(--radius-md);background:var(--color-surface-alt);color:var(--mute);font-size:.8rem;font-weight:700}
 
-/* Componentes */
+/* Estructura para el Dashboard (2 columnas) */
+.dashboard-grid{display:grid;grid-template-columns:2fr 1fr;gap:16px;align-items:start}
+
 .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);padding:20px;margin-bottom:16px;overflow-x:auto;box-shadow:var(--shadow-sm)}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px;margin-bottom:16px}
-.kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow-sm)}
-.kpi small{display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}
-.kpi b{display:block;font:800 1.7rem/1.1 var(--font-display);margin-top:4px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:16px}
+/* KPIs con posición relativa para el ícono de fondo */
+.kpi{position:relative;overflow:hidden;background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);padding:20px;box-shadow:var(--shadow-sm)}
+.kpi small{display:block;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--mute);position:relative;z-index:2}
+.kpi b{display:block;font:800 1.7rem/1.1 var(--font-display);margin-top:4px;position:relative;z-index:2}
+/* Ícono decorativo en la esquina de los KPIs */
+.kpi-icon{position:absolute;right:-10px;bottom:-15px;width:80px;height:80px;opacity:0.06;color:var(--ink);pointer-events:none;z-index:1}
+
+/* LEDs de estado para las alertas */
+.led-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:8px;flex-shrink:0}
+.led-dot.bad{background:var(--bad);box-shadow:0 0 8px var(--bad)}
+.led-dot.warn{background:var(--color-warning);box-shadow:0 0 8px var(--color-warning)}
+.led-dot.ok{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+
 .mute{color:var(--mute);font-size:.8rem}.end{text-align:right}.pos-n{color:var(--ok)}.neg{color:var(--bad)}
 .bar{display:flex;gap:10px;margin-bottom:14px;align-items:center;flex-wrap:wrap}
 .inp{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-md);background:var(--color-surface-alt);font-size:.9rem;outline:none}.inp:focus{border-color:var(--acc)}
@@ -50,17 +58,27 @@ th{font-size:.72rem;text-transform:uppercase;letter-spacing:.03em;color:var(--mu
 .tot{display:flex;justify-content:space-between;align-items:center;font:700 1.3rem var(--font-display);margin:14px 0}
 .meter{height:10px;background:var(--color-surface-alt);border:1px solid var(--line);border-radius:99px;overflow:hidden;margin:8px 0}.meter i{display:block;height:100%;background:var(--ok)}
 
-/* Ventanas y avisos */
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(8,8,10,.66);backdrop-filter:blur(3px);z-index:100;align-items:flex-start;justify-content:center;padding:32px 16px;overflow-y:auto}
-.modal-overlay.open{display:flex}
-.modal-box{background:var(--card);border:1px solid var(--line);border-radius:18px;width:100%;max-width:520px;box-shadow:var(--shadow-lg);overflow:hidden}
+/* Ventanas y avisos con micro-interacciones suaves */
+.modal-overlay{
+  display:none;position:fixed;inset:0;background:rgba(8,8,10,.66);backdrop-filter:blur(3px);
+  z-index:100;align-items:flex-start;justify-content:center;padding:32px 16px;overflow-y:auto;
+  opacity: 0; visibility: hidden; transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+.modal-overlay.open{display:flex; opacity: 1; visibility: visible;}
+
+.modal-box{
+  background:var(--card);border:1px solid var(--line);border-radius:18px;width:100%;max-width:520px;
+  box-shadow:var(--shadow-lg);overflow:hidden;
+  transform: translateY(15px) scale(0.98); transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.modal-overlay.open .modal-box{ transform: translateY(0) scale(1); }
+
 .modal-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line)}.modal-title{margin:0;font-size:1.3rem}
 .modal-close{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--color-surface-alt);color:var(--mute)}.modal-close:hover{background:var(--bad);color:#fff}
 .modal-body{padding:20px;max-height:70vh;overflow-y:auto}.modal-footer{display:flex;gap:12px;justify-content:flex-end;padding:16px 20px;border-top:1px solid var(--line)}
 #toast{position:fixed;bottom:24px;right:24px;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--acc);padding:12px 16px;border-radius:var(--radius-md);box-shadow:var(--shadow-lg);font-weight:600;opacity:0;pointer-events:none;transition:.2s;z-index:200}#toast.on{opacity:1}
-@media(max-width:900px){.pos{grid-template-columns:1fr}.grid3{grid-template-columns:1fr 1fr}}
+@media(max-width:900px){.pos{grid-template-columns:1fr}.grid3{grid-template-columns:1fr 1fr} .dashboard-grid{grid-template-columns:1fr} }
 
-/* Capa de tonalidades: profundidad con los 3 colores */
 th{background:var(--azul-900)}
 tbody tr:hover td{background:color-mix(in srgb,var(--azul-600) 22%,transparent)}
 .inp:focus{border-color:var(--amarillo-300);box-shadow:0 0 0 3px var(--amarillo-soft)}
